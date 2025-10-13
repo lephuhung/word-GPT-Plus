@@ -73,6 +73,16 @@
               </select>
               <ChevronDown class="select-icon" />
             </div>
+            <button
+              v-if="settingForm.api === 'ollama'"
+              class="icon-btn"
+              style="margin-left: 8px;"
+              :disabled="loading"
+              @click="loadOllamaModels()"
+              title="Refresh models"
+            >
+              <RefreshCw class="small-icon" />
+            </button>
           </div>
         </div>
         <div class="settings-row">
@@ -275,7 +285,8 @@ import {
   Sliders,
   ChevronDown,
   MessageSquare,
-  Zap
+  Zap,
+  RefreshCw
 } from 'lucide-vue-next'
 import { onBeforeMount, ref, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
@@ -342,6 +353,9 @@ const insertTypeList = ['replace', 'append', 'newLine', 'NoAction'].map(
 )
 
 // Dynamic model selection based on current API
+// Reactive options for Ollama models
+const ollamaModelOptions = ref<Array<{ label: string; value: string }>>(settingPreset.ollamaModelSelect.optionList || [])
+
 const currentModelOptions = computed(() => {
   switch (settingForm.value.api) {
     case 'official':
@@ -349,7 +363,7 @@ const currentModelOptions = computed(() => {
     case 'gemini':
       return settingPreset.geminiModelSelect.optionList
     case 'ollama':
-      return settingPreset.ollamaModelSelect.optionList
+      return ollamaModelOptions.value
     case 'groq':
       return settingPreset.groqModelSelect.optionList
     case 'azure':
@@ -499,6 +513,47 @@ function handleWordFormattingChange(val: boolean) {
   useWordFormatting.value = val
   localStorage.setItem(localStorageKey.useWordFormatting, String(val))
 }
+
+// Load Ollama models dynamically when Ollama API is selected
+async function loadOllamaModels() {
+  try {
+    const endpoint = (settingForm.value.ollamaEndpoint || '').trim()
+    if (!endpoint) {
+      ElMessage.warning('Vui lòng cấu hình Ollama endpoint trong Settings')
+      return
+    }
+    const models = await API.ollama.listModels(endpoint)
+    if (models && models.length > 0) {
+      // Update reactive options for HomePage
+      ollamaModelOptions.value = models
+      // Also update preset for SettingsPage usage (non-reactive there)
+      settingPreset.ollamaModelSelect.optionList = models
+      // Ensure current selection is valid
+      const current = settingForm.value.ollamaModelSelect
+      const exists = models.some(m => m.value === current)
+      if (!exists) {
+        settingForm.value.ollamaModelSelect = models[0].value
+      }
+      ElMessage.success(`Đã nạp ${models.length} models từ Ollama`)
+    } else {
+      ElMessage.warning('Không tìm thấy model từ endpoint Ollama')
+    }
+  } catch (e) {
+    console.error('Load Ollama models failed:', e)
+    ElMessage.error('Nạp models thất bại. Kiểm tra kết nối/endpoint')
+  }
+}
+
+// Watch API selection to trigger Ollama models load
+watch(
+  () => settingForm.value.api,
+  (api) => {
+    if (api === 'ollama') {
+      loadOllamaModels()
+    }
+  },
+  { immediate: true }
+)
 
 async function template(taskType: keyof typeof buildInPrompt | 'custom') {
   loading.value = true

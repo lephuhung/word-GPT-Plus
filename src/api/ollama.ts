@@ -5,6 +5,7 @@ import { updateResult, handleError, finishLoading } from './utils'
 interface ChatCompletionStreamOptions extends BaseChatCompletionOptions {
   ollamaEndpoint: string
   ollamaModel: string
+  jwtToken?: string
 }
 
 async function createChatCompletionStream(
@@ -12,26 +13,49 @@ async function createChatCompletionStream(
 ): Promise<void> {
   try {
     const formatedEndpoint = options.ollamaEndpoint.replace(/\/$/, '')
-    const response = await axios.post(
-      `${formatedEndpoint}/api/chat`,
-      {
-        model: options.ollamaModel,
-        options: { temperature: options.temperature },
-        stream: false,
-        messages: options.messages
-      },
-      { headers: { 'Content-Type': 'application/json' } }
-    )
+    const isOpenAICompatible = /\/v1(\/|$)/.test(formatedEndpoint)
+
+    const openaiBase = formatedEndpoint
+      .replace(/\/v1\/models$/, '/v1')
+      .replace(/\/v1\/chat\/completions$/, '/v1')
+    const nativeBase = formatedEndpoint.replace(/\/api\/chat$/, '/api')
+
+    const url = isOpenAICompatible
+      ? `${openaiBase}/chat/completions`
+      : nativeBase.endsWith('/api')
+        ? `${nativeBase}/chat`
+        : `${formatedEndpoint}/v1/chat/completions`
+
+    const payload = isOpenAICompatible
+      ? {
+          model: options.ollamaModel,
+          temperature: options.temperature,
+          stream: false,
+          messages: options.messages
+        }
+      : {
+          model: options.ollamaModel,
+          options: { temperature: options.temperature },
+          stream: false,
+          messages: options.messages
+        }
+
+    const response = await axios.post(url, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${options.jwtToken ?? 'demo'}`
+      }
+    })
 
     if (response.status !== 200) {
       throw new Error(`Status code: ${response.status}`)
     }
 
-    updateResult(
-      { content: response.data?.message?.content?.replace(/\\n/g, '\n') ?? '' },
-      options.result,
-      options.historyDialog
-    )
+    const content = isOpenAICompatible
+      ? (response.data?.choices?.[0]?.message?.content ?? '')
+      : (response.data?.message?.content?.replace(/\\n/g, '\n') ?? '')
+
+    updateResult({ content }, options.result, options.historyDialog)
   } catch (error) {
     handleError(error as Error, options.result, options.errorIssue)
   } finally {
@@ -39,4 +63,82 @@ async function createChatCompletionStream(
   }
 }
 
-export default { createChatCompletionStream }
+/**
+ * Fetch available models from Ollama endpoint.
+ * Uses the configured endpoint in this module and calls `/models`.
+ */
+async function listModels(endpointOrUrl: string): Promise<{ label: string; value: string }[]> {
+  const base = endpointOrUrl.replace(/\/$/, '')
+  let url = base
+  // Decide URL based on provided endpoint style
+  if (/\/v1\/models$/.test(base) || /\/api\/tags$/.test(base)) {
+    url = base // already full path
+  } else if (/\/v1$/.test(base)) {
+    url = `${base}/models` // OpenAI-compatible base
+  } else if (/\/api$/.test(base)) {
+    url = `${base}/tags` // Native Ollama base
+  } else if (/\/models$/.test(base)) {
+    url = base // already /models
+  } else {
+    // Default to OpenAI-compatible path
+    url = `${base}/v1/models`
+  }
+  try {
+    console.info('[Ollama] Fetching models from:', url)
+    const res = await axios.get(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer demo'
+      }
+    })
+    const data = res.data
+    // Parse various response formats
+    let models: string[] = []
+    if (Array.isArray(data)) {
+      models = data.map((m: any) => (typeof m === 'string' ? m : m?.id || m?.name || m?.model)).filter(Boolean)
+    } else if (Array.isArray(data?.models)) {
+      // Ollama native /api/tags
+      models = data.models.map((m: any) => m?.name || m?.model || m?.id).filter(Boolean)
+    } else if (Array.isArray(data?.data)) {
+      // OpenAI-compatible /v1/models
+      models = data.data.map((m: any) => (typeof m === 'string' ? m : m?.id || m?.name || m?.model)).filter(Boolean)
+    }
+    if (models.length === 0) {
+      // Try a fallback path (switch between native and openai-compatible)
+      let fallbackUrl: string | null = null
+      if (/\/api\/tags$/.test(url)) {
+        // switch to openai-compatible
+        fallbackUrl = `${base}/v1/models`
+      } else if (/\/v1\/models$/.test(url)) {
+        // switch to native
+        fallbackUrl = `${base}/api/tags`
+      } else if (/\/models$/.test(url)) {
+        // ambiguous /models -> try native
+        fallbackUrl = `${base}/api/tags`
+      }
+      if (fallbackUrl) {
+        try {
+          console.info('[Ollama] Fallback fetching models from:', fallbackUrl)
+          const res2 = await axios.get(fallbackUrl, { headers: { 'Content-Type': 'application/json' } })
+          const data2 = res2.data
+          if (Array.isArray(data2)) {
+            models = data2.map((m: any) => (typeof m === 'string' ? m : m?.id || m?.name || m?.model)).filter(Boolean)
+          } else if (Array.isArray(data2?.models)) {
+            models = data2.models.map((m: any) => m?.name || m?.model || m?.id).filter(Boolean)
+          } else if (Array.isArray(data2?.data)) {
+            models = data2.data.map((m: any) => (typeof m === 'string' ? m : m?.id || m?.name || m?.model)).filter(Boolean)
+          }
+        } catch (fallbackErr) {
+          console.error('Fallback fetch failed:', fallbackErr)
+        }
+      }
+    }
+    const unique = Array.from(new Set(models))
+    return unique.map(name => ({ label: name, value: name }))
+  } catch (err) {
+    console.error('Failed to fetch Ollama models:', err)
+    return []
+  }
+}
+
+export default { createChatCompletionStream, listModels }
