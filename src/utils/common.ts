@@ -15,31 +15,7 @@ export interface Auth {
 
 export function checkAuth(auth: Auth): boolean {
   if (!auth) return false
-
-  switch (auth.type) {
-    case 'official':
-      return !!auth.apiKey
-    case 'azure':
-      return !!auth.azureAPIKey
-    case 'gemini':
-      return !!auth.geminiAPIKey
-    case 'groq':
-      return !!auth.groqAPIKey
-    case 'ollama':
-      return true
-    case 'agent':
-      if (!auth.agentBaseModeAPI) return false
-      const baseAuth: Auth = {
-        type: auth.agentBaseModeAPI as supportedPlatforms,
-        apiKey: auth.apiKey,
-        azureAPIKey: auth.azureAPIKey,
-        geminiAPIKey: auth.geminiAPIKey,
-        groqAPIKey: auth.groqAPIKey
-      }
-      return checkAuth(baseAuth)
-    default:
-      return false
-  }
+  return auth.type === 'ollama'
 }
 
 export function forceNumber(val: any): number {

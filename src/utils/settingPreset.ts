@@ -1,12 +1,6 @@
 import { i18n } from '@/i18n'
 import { forceNumber, optionLists } from './common'
-import {
-  availableModels,
-  availableModelsForGemini,
-  availableModelsForGroq,
-  availableModelsForOllama,
-  availableModelsForAgent
-} from './constant'
+import { availableModelsForOllama } from './constant'
 import { localStorageKey } from './enum'
 
 type componentType = 'input' | 'select' | 'inputNum'
@@ -25,37 +19,10 @@ export type SettingNames =
   | 'api'
   | 'localLanguage'
   | 'replyLanguage'
-  | 'officialAPIKey'
-  | 'officialBasePath'
-  | 'officialCustomModel'
-  | 'officialTemperature'
-  | 'officialMaxTokens'
-  | 'officialModelSelect'
-  | 'azureAPIKey'
-  | 'azureAPIEndpoint'
-  | 'azureDeploymentName'
-  | 'azureTemperature'
-  | 'azureMaxTokens'
-  | 'azureAPIVersion'
-  | 'geminiAPIKey'
-  | 'geminiCustomModel'
-  | 'geminiModelSelect'
-  | 'geminiTemperature'
-  | 'geminiMaxTokens'
   | 'ollamaEndpoint'
   | 'ollamaCustomModel'
   | 'ollamaModelSelect'
   | 'ollamaTemperature'
-  | 'groqAPIKey'
-  | 'groqTemperature'
-  | 'groqMaxTokens'
-  | 'groqModelSelect'
-  | 'groqCustomModel'
-  | 'agentMode'
-  | 'agentMaxSteps'
-  | 'agentThinkingDepth'
-  | 'agentAutoExecute'
-  | 'agentBaseModeAPI'
 
 // Helper functions
 const createStorageFuncs = (key: string, defaultValue: any) => ({
@@ -109,7 +76,7 @@ const defaultInputSetting = inputSetting('')
 
 export const settingPreset: Record<SettingNames, ISettingOption> = {
   api: {
-    ...inputSetting('official'),
+    ...inputSetting('ollama'),
     type: 'select',
     optionList: optionLists.apiList
   },
@@ -127,33 +94,6 @@ export const settingPreset: Record<SettingNames, ISettingOption> = {
     type: 'select',
     optionList: optionLists.replyLanguageList
   },
-  officialAPIKey: inputSetting('', 'apiKey'),
-  officialBasePath: inputSetting('', 'basePath'),
-  officialCustomModel: inputSetting('', 'customModel'),
-  officialTemperature: inputNumSetting(0.7, 'temperature', 'temperature'),
-  officialMaxTokens: inputNumSetting(800, 'maxTokens', 'maxTokens'),
-  officialModelSelect: selectSetting(
-    availableModels['gpt-3.5'],
-    'model',
-    optionLists.officialModelList,
-    availableModels
-  ),
-  azureAPIKey: defaultInputSetting,
-  azureAPIEndpoint: defaultInputSetting,
-  azureDeploymentName: defaultInputSetting,
-  azureTemperature: inputNumSetting(0.7, 'azureTemperature', 'temperature'),
-  azureMaxTokens: inputNumSetting(800, 'azureMaxTokens', 'maxTokens'),
-  azureAPIVersion: defaultInputSetting,
-  geminiAPIKey: defaultInputSetting,
-  geminiCustomModel: defaultInputSetting,
-  geminiModelSelect: selectSetting(
-    availableModelsForGemini['gemini-1.5-pro'],
-    'geminiModel',
-    optionLists.geminiModelList,
-    availableModelsForGemini
-  ),
-  geminiTemperature: inputNumSetting(0.7, 'geminiTemperature', 'temperature'),
-  geminiMaxTokens: inputNumSetting(800, 'geminiMaxTokens', 'maxTokens'),
   ollamaEndpoint: defaultInputSetting,
   ollamaCustomModel: defaultInputSetting,
   ollamaModelSelect: selectSetting(
@@ -163,35 +103,4 @@ export const settingPreset: Record<SettingNames, ISettingOption> = {
     availableModelsForOllama
   ),
   ollamaTemperature: inputNumSetting(0.7, 'ollamaTemperature', 'temperature'),
-  groqAPIKey: defaultInputSetting,
-  groqTemperature: inputNumSetting(0.5, 'groqTemperature', 'temperature'),
-  groqMaxTokens: inputNumSetting(1024, 'groqMaxTokens', 'maxTokens'),
-  groqModelSelect: selectSetting(
-    availableModelsForGroq['gemma2-9b-it'],
-    'groqModel',
-    optionLists.groqModelList,
-    availableModelsForGroq
-  ),
-  groqCustomModel: defaultInputSetting,
-  agentMode: selectSetting(
-    availableModelsForAgent['auto-workflow'],
-    'agentMode',
-    optionLists.agentModelList,
-    availableModelsForAgent
-  ),
-  agentMaxSteps: inputNumSetting(5, 'agentMaxSteps', 'maxTokens'),
-  agentThinkingDepth: inputNumSetting(3, 'agentThinkingDepth', 'temperature'),
-  agentAutoExecute: {
-    defaultValue: 'true',
-    type: 'select',
-    optionList: [
-      { label: 'Yes', value: 'true' },
-      { label: 'No', value: 'false' }
-    ]
-  },
-  agentBaseModeAPI: {
-    defaultValue: 'official',
-    type: 'select',
-    optionList: optionLists.apiList.filter(api => api.value !== 'agent')
-  }
 }

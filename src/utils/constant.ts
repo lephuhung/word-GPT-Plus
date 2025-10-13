@@ -44,46 +44,14 @@ export const languageMap: IStringKeyMap = {
 }
 
 export const availableAPIs: IStringKeyMap = {
-  official: 'official',
-  azure: 'azure',
-  gemini: 'gemini',
-  ollama: 'ollama',
-  groq: 'groq',
-  agent: 'agent'
+  ollama: 'ollama'
 }
 
 // official API 可用的模型
-export const availableModels: IStringKeyMap = {
-  'gpt-5': 'gpt-5',
-  'gpt-5-mini': 'gpt-5-mini',
-  'gpt-5-nano': 'gpt-5-nano',
-  'gpt-4.1': 'gpt-4.1',
-  'gpt-4.1-mini': 'gpt-4.1-mini',
-  'gpt-4.1-nano': 'gpt-4.1-nano',
-  'gpt-4o': 'gpt-4o',
-  'gpt-4o-mini': 'gpt-4o-mini',
-  'o1': 'o1',
-  'o1-pro': 'o1-pro',
-  'o1-mini': 'o1-mini',
-  'o3': 'o3',
-  'o3-pro': 'o3-pro',
-  'o3-mini': 'o3-mini',
-}
+export const availableModels: IStringKeyMap = {}
 
 // Gemini API 可用的模型
-export const availableModelsForGemini: IStringKeyMap = {
-  'gemini-2.5-pro': 'gemini-2.5-pro',
-  'gemini-2.5-flash': 'gemini-2.5-flash',
-  'gemini-2.5-flash-lite': 'gemini-2.5-flash-lite',
-  'gemini-2.0-flash': 'gemini-2.0-flash',
-  'gemini-2.0-flash-lite': 'gemini-2.0-flash-lite',
-  'gemini-1.5-flash': 'gemini-1.5-flash',
-  'gemini-1.5-flash-8b': 'gemini-1.5-flash-8b',
-  'gemini-1.0-pro': 'gemini-1.0-pro',
-  'gemini-1.5-pro': 'gemini-1.5-pro',
-  'gemini-exp-1114': 'gemini-exp-1114',
-  aqa: 'aqa'
-}
+export const availableModelsForGemini: IStringKeyMap = {}
 
 // Ollama API 可用的模型
 export const availableModelsForOllama: IStringKeyMap = {
@@ -113,30 +81,10 @@ export const availableModelsForOllama: IStringKeyMap = {
   vicuna: 'vicuna'
 }
 
-export const availableModelsForGroq: IStringKeyMap = {
-  'llama-3.1-8b-instant': 'llama-3.1-8b-instant',
-  'llama-3.3-70b-versatile': 'llama-3.3-70b-versatile',
-  'meta-llama/llama-guard-4-12b': 'meta-llama/llama-guard-4-12b',
-  'openai/gpt-oss-120b': 'openai/gpt-oss-120b',
-  'openai/gpt-oss-20b': 'openai/gpt-oss-20b',
-  'whisper-large-v3': 'whisper-large-v3',
-  'whisper-large-v3-turbo': 'whisper-large-v3-turbo',
-  'deepseek-r1-distill-llama-70b': 'deepseek-r1-distill-llama-70b',
-  'meta-llama/llama-4-maverick-17b-128e-instruct': 'meta-llama/llama-4-maverick-17b-128e-instruct',
-  'meta-llama/llama-4-scout-17b-16e-instruct': 'meta-llama/llama-4-scout-17b-16e-instruct',
-  'meta-llama/llama-prompt-guard-2-22m': 'meta-llama/llama-prompt-guard-2-22m',
-  'moonshotai/kimi-k2-instruct': 'moonshotai/kimi-k2-instruct',
-  'qwen/qwen3-32b': 'qwen/qwen3-32b'  
-}
+export const availableModelsForGroq: IStringKeyMap = {}
 
 // Agent API 可用的模型
-export const availableModelsForAgent: IStringKeyMap = {
-  'auto-workflow': 'auto-workflow',
-  'multi-step': 'multi-step',
-  'research-assistant': 'research-assistant',
-  'writing-coach': 'writing-coach',
-  'document-analyzer': 'document-analyzer'
-}
+export const availableModelsForAgent: IStringKeyMap = {}
 
 export const buildInPrompt = {
   translate: {

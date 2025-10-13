@@ -2,6 +2,33 @@ import axios from 'axios'
 import { BaseChatCompletionOptions } from './types'
 import { updateResult, handleError, finishLoading } from './utils'
 
+function deepExtractString(payload: any): string {
+  if (!payload) return ''
+  if (typeof payload === 'string') return payload
+  if (Array.isArray(payload)) {
+    for (const item of payload) {
+      const found = deepExtractString(item)
+      if (found) return found
+    }
+    return ''
+  }
+  if (typeof payload === 'object') {
+    // Preferred keys first
+    const preferredKeys = ['content', 'text', 'response', 'output', 'output_text']
+    for (const key of preferredKeys) {
+      const val = (payload as any)[key]
+      const found = deepExtractString(val)
+      if (found) return found
+    }
+    // Generic deep search
+    for (const val of Object.values(payload)) {
+      const found = deepExtractString(val)
+      if (found) return found
+    }
+  }
+  return ''
+}
+
 interface ChatCompletionStreamOptions extends BaseChatCompletionOptions {
   ollamaEndpoint: string
   ollamaModel: string
@@ -51,10 +78,35 @@ async function createChatCompletionStream(
       throw new Error(`Status code: ${response.status}`)
     }
 
-    const content = isOpenAICompatible
-      ? (response.data?.choices?.[0]?.message?.content ?? '')
-      : (response.data?.message?.content?.replace(/\\n/g, '\n') ?? '')
+    // Normalize and extract content from different response shapes
+    const data = response.data as any
+    let content: string = ''
 
+    if (isOpenAICompatible) {
+      // OpenAI-compatible providers may return either message.content or text
+      content =
+        data?.choices?.[0]?.message?.content ??
+        data?.choices?.[0]?.text ??
+        ''
+    } else {
+      // Native Ollama-style response
+      content =
+        data?.message?.content ??
+        data?.message ??
+        data?.response ??
+        ''
+    }
+
+    // Fallback: deep search if still empty
+    if (!content || typeof content !== 'string' || content.length === 0) {
+      // Try the first choice or whole payload
+      content = deepExtractString(data?.choices?.[0]) || deepExtractString(data)
+    }
+
+    // Replace escaped newlines with real newlines for consistent display
+    content = String(content).replace(/\\n/g, '\n')
+    console.info('[Ollama] Raw data:', JSON.stringify(data).slice(0, 500) + '...')
+    console.info('[Ollama] Response:', content)
     updateResult({ content }, options.result, options.historyDialog)
   } catch (error) {
     handleError(error as Error, options.result, options.errorIssue)

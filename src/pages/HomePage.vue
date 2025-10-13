@@ -15,18 +15,21 @@
       </button>
     </div>
 
+    <!-- Word Info -->
+
+
     <!-- Main Actions -->
     <div class="main-actions">
       <button 
         class="primary-btn"
-        @click="StartChat"
+        @click="handleGetWordInfo"
         :disabled="loading"
       >
-        <Play class="icon" />
-        {{ $t('start') }}
+        <FileText class="icon" />
+        Lấy thông tin Word
       </button>
       <button 
-        v-if="['azure', 'official', 'gemini', 'ollama', 'groq', 'agent'].includes(settingForm.api)"
+        v-if="true"
         class="secondary-btn"
         @click="continueChat"
         :disabled="loading"
@@ -34,6 +37,20 @@
         <ArrowRight class="icon" />
         {{ $t('continue') }}
       </button>
+    </div>
+        <div class="section">
+      <div class="section-header">
+        <FileText class="section-icon" />
+        <h2 class="section-title">Thông tin Word</h2>
+      </div>
+      <textarea 
+        v-if="wordInfo"
+        :value="wordInfo"
+        class="result-textarea"
+        placeholder="Thông tin Word"
+        rows="8"
+        readonly
+      ></textarea>
     </div>
 
     <!-- Progress Indicator -->
@@ -44,25 +61,19 @@
       </div>
     </div>
 
-    <!-- Quick Settings - Always visible -->
-    <div class="section">
-      <div class="section-header">
-        <Sliders class="section-icon" />
-        <h2 class="section-title">Quick Settings</h2>
+    <!-- Quick Settings - Collapsible -->
+    <div class="collapsible-section">
+      <div class="collapsible-header" @click="quickSettingsExpanded = !quickSettingsExpanded">
+        <div class="collapsible-title">
+          <Sliders class="collapsible-icon" />
+          Quick Settings
+        </div>
+        <ChevronDown class="collapse-icon" :class="{ expanded: quickSettingsExpanded }" />
       </div>
-      <div class="settings-grid">
+      <div class="collapsible-content" :class="{ expanded: quickSettingsExpanded }">
+        <div class="settings-grid">
         <div class="settings-row">
-          <div class="setting-item">
-            <label class="setting-label">{{ $t('apiLabel') }}</label>
-            <div class="select-wrapper">
-              <select v-model="settingForm.api" class="select-input">
-                <option v-for="item in settingPreset.api.optionList" :key="item.value" :value="item.value">
-                  {{ item.label }}
-                </option>
-              </select>
-              <ChevronDown class="select-icon" />
-            </div>
-          </div>
+          <!-- API selection removed: app is now Ollama-only -->
           <div class="setting-item">
             <label class="setting-label">{{ $t('modelLabel') }}</label>
             <div class="select-wrapper">
@@ -73,16 +84,6 @@
               </select>
               <ChevronDown class="select-icon" />
             </div>
-            <button
-              v-if="settingForm.api === 'ollama'"
-              class="icon-btn"
-              style="margin-left: 8px;"
-              :disabled="loading"
-              @click="loadOllamaModels()"
-              title="Refresh models"
-            >
-              <RefreshCw class="small-icon" />
-            </button>
           </div>
         </div>
         <div class="settings-row">
@@ -97,13 +98,13 @@
               <ChevronDown class="select-icon" />
             </div>
           </div>
-          <div class="setting-item">
+          <!-- <div class="setting-item">
             <label class="setting-label">{{ $t('useWordFormattingLabel') }}</label>
             <div class="toggle-wrapper">
               <input type="checkbox" v-model="useWordFormatting" class="toggle-input" @change="(e) => handleWordFormattingChange((e.target as HTMLInputElement)?.checked ?? false)" />
               <div class="toggle-slider"></div>
             </div>
-          </div>
+          </div> -->
         </div>
         <div class="setting-item">
           <label class="setting-label">{{ $t('replyLanguageLabel') }}</label>
@@ -115,6 +116,7 @@
             </select>
             <ChevronDown class="select-icon" />
           </div>
+        </div>
         </div>
       </div>
     </div>
@@ -147,13 +149,14 @@
     <div class="section">
       <div class="section-header">
         <FileText class="section-icon" />
-        <h2 class="section-title">{{ $t('result') }}</h2>
+        <h2 class="section-title">{{ $t('result') }}</h2> 
       </div>
       <textarea 
-        v-model="result"
+        :value="displayResult"
         class="result-textarea"
         :placeholder="$t('result')"
-        rows="3"
+        rows="6"
+        readonly
       ></textarea>
     </div>
 
@@ -293,6 +296,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
 import API from '@/api'
+import { getWordDocumentInfo, formatWordInfoVi } from '@/utils/wordInfo'
 
 import { buildInPrompt } from '@/utils/constant'
 import { promptDbInstance } from '@/store/promtStore'
@@ -310,7 +314,8 @@ const { t } = useI18n()
 const { settingForm } = useSettingForm()
 
 // Collapsible section states
-const aiToolsExpanded = ref(false)
+const quickSettingsExpanded = ref(false)
+const aiToolsExpanded = ref(true)
 const promptsExpanded = ref(false)
 
 // system prompt
@@ -335,12 +340,44 @@ const removePromptValue = ref<any[]>([])
 
 // result
 const result = ref('res')
+const displayResult = computed(() => {
+  const text = String(result.value || '')
+  if (text.length <= 200) return text
+  return text.slice(0, 200) + '...'
+})
+// word info
+const wordInfo = ref('')
 const loading = ref(false)
 const router = useRouter()
 const historyDialog = ref<any[]>([])
 
 const jsonIssue = ref(false)
 const errorIssue = ref(false)
+
+async function handleGetWordInfo(): Promise<void> {
+  try {
+    loading.value = true
+    // Xoá nội dung cũ để ẩn textbox cho đến khi có kết quả mới
+    wordInfo.value = ''
+    const info = await getWordDocumentInfo()
+    const raw = formatWordInfoVi(info)
+    const text = raw
+      .split('\n')
+      .map(line => {
+        const l = line.trim()
+        if (!l) return ''
+        return /^[\-•\*]/.test(l) ? l : '- ' + l
+      })
+      .filter(Boolean)
+      .join('\n')
+    wordInfo.value = text
+  } catch (e) {
+    console.error('Get Word info failed:', e)
+    wordInfo.value = 'Không thể lấy thông tin Word: ' + String(e)
+  } finally {
+    loading.value = false
+  }
+}
 
 // insert type
 const insertType = ref<insertTypes>('replace')
@@ -356,60 +393,16 @@ const insertTypeList = ['replace', 'append', 'newLine', 'NoAction'].map(
 // Reactive options for Ollama models
 const ollamaModelOptions = ref<Array<{ label: string; value: string }>>(settingPreset.ollamaModelSelect.optionList || [])
 
-const currentModelOptions = computed(() => {
-  switch (settingForm.value.api) {
-    case 'official':
-      return settingPreset.officialModelSelect.optionList
-    case 'gemini':
-      return settingPreset.geminiModelSelect.optionList
-    case 'ollama':
-      return ollamaModelOptions.value
-    case 'groq':
-      return settingPreset.groqModelSelect.optionList
-    case 'azure':
-      return [] // Azure uses deployment name instead of model selection
-    default:
-      return []
-  }
-})
+const currentModelOptions = computed(() => ollamaModelOptions.value)
 
 
 
 const currentModelSelect = computed({
   get() {
-    switch (settingForm.value.api) {
-      case 'official':
-        return settingForm.value.officialModelSelect
-      case 'gemini':
-        return settingForm.value.geminiModelSelect
-      case 'ollama':
-        return settingForm.value.ollamaModelSelect
-      case 'groq':
-        return settingForm.value.groqModelSelect
-      case 'azure':
-        return settingForm.value.azureDeploymentName
-      default:
-        return ''
-    }
+    return settingForm.value.ollamaModelSelect
   },
   set(value) {
-    switch (settingForm.value.api) {
-      case 'official':
-        settingForm.value.officialModelSelect = value
-        break
-      case 'gemini':
-        settingForm.value.geminiModelSelect = value
-        break
-      case 'ollama':
-        settingForm.value.ollamaModelSelect = value
-        break
-      case 'groq':
-        settingForm.value.groqModelSelect = value
-        break
-      case 'azure':
-        settingForm.value.azureDeploymentName = value
-        break
-    }
+    settingForm.value.ollamaModelSelect = value
   }
 })
 
@@ -544,16 +537,7 @@ async function loadOllamaModels() {
   }
 }
 
-// Watch API selection to trigger Ollama models load
-watch(
-  () => settingForm.value.api,
-  (api) => {
-    if (api === 'ollama') {
-      loadOllamaModels()
-    }
-  },
-  { immediate: true }
-)
+// Load Ollama models on mount (app is Ollama-only)
 
 async function template(taskType: keyof typeof buildInPrompt | 'custom') {
   loading.value = true
@@ -591,126 +575,7 @@ async function template(taskType: keyof typeof buildInPrompt | 'custom') {
       settingForm.value.replyLanguage
     )
   }
-  if (
-    settingForm.value.api === 'official' &&
-    settingForm.value.officialAPIKey
-  ) {
-    const config = API.official.setConfig(
-      settingForm.value.officialAPIKey,
-      settingForm.value.officialBasePath
-    )
-    historyDialog.value = [
-      {
-        role: 'system',
-        content: systemMessage
-      },
-      {
-        role: 'user',
-        content: userMessage
-      }
-    ]
-    await API.official.createChatCompletionStream({
-      config,
-      messages: historyDialog.value,
-      result,
-      historyDialog,
-      errorIssue,
-      loading,
-      maxTokens: settingForm.value.officialMaxTokens,
-      temperature: settingForm.value.officialTemperature,
-      model:
-        settingForm.value.officialCustomModel ||
-        settingForm.value.officialModelSelect
-    })
-  } else if (settingForm.value.api === 'groq' && settingForm.value.groqAPIKey) {
-    historyDialog.value = [
-      {
-        role: 'system',
-        content: systemMessage
-      },
-      {
-        role: 'user',
-        content: userMessage
-      }
-    ]
-    await API.groq.createChatCompletionStream({
-      groqAPIKey: settingForm.value.groqAPIKey,
-      groqModel:
-        settingForm.value.groqCustomModel || settingForm.value.groqModelSelect,
-      messages: historyDialog.value,
-      result,
-      historyDialog,
-      errorIssue,
-      loading,
-      maxTokens: settingForm.value.officialMaxTokens,
-      temperature: settingForm.value.officialTemperature
-    })
-  } else if (
-    settingForm.value.api === 'azure' &&
-    settingForm.value.azureAPIKey
-  ) {
-    historyDialog.value = [
-      {
-        role: 'system',
-        content: systemMessage
-      },
-      {
-        role: 'user',
-        content: userMessage
-      }
-    ]
-    await API.azure.createChatCompletionStream({
-      azureAPIKey: settingForm.value.azureAPIKey,
-      azureAPIEndpoint: settingForm.value.azureAPIEndpoint,
-      azureDeploymentName: settingForm.value.azureDeploymentName,
-      azureAPIVersion: settingForm.value.azureAPIVersion,
-      messages: historyDialog.value,
-      result,
-      historyDialog,
-      errorIssue,
-      loading,
-      maxTokens: settingForm.value.azureMaxTokens,
-      temperature: settingForm.value.azureTemperature
-    })
-  } else if (
-    settingForm.value.api === 'gemini' &&
-    settingForm.value.geminiAPIKey
-  ) {
-    historyDialog.value = [
-      {
-        role: 'user',
-        parts: [
-          {
-            text: systemMessage + '\n' + userMessage
-          }
-        ]
-      },
-      {
-        role: 'model',
-        parts: [
-          {
-            text: 'Hi, what can I help you?'
-          }
-        ]
-      }
-    ]
-    await API.gemini.createChatCompletionStream({
-      geminiAPIKey: settingForm.value.geminiAPIKey,
-      messages: userMessage,
-      result,
-      historyDialog,
-      errorIssue,
-      loading,
-      maxTokens: settingForm.value.geminiMaxTokens,
-      temperature: settingForm.value.geminiTemperature,
-      geminiModel:
-        settingForm.value.geminiCustomModel ||
-        settingForm.value.geminiModelSelect
-    })
-  } else if (
-    settingForm.value.api === 'ollama' &&
-    settingForm.value.ollamaEndpoint
-  ) {
+  if (settingForm.value.ollamaEndpoint) {
     historyDialog.value = [
       {
         role: 'user',
@@ -729,47 +594,8 @@ async function template(taskType: keyof typeof buildInPrompt | 'custom') {
       loading,
       temperature: settingForm.value.ollamaTemperature
     })
-  } else if (settingForm.value.api === 'agent') {
-    historyDialog.value = [
-      {
-        role: 'system',
-        content: systemMessage
-      },
-      {
-        role: 'user',
-        content: userMessage
-      }
-    ]
-    await API.agent.createChatCompletionStream({
-      agentMode: settingForm.value.agentMode,
-      agentMaxSteps: settingForm.value.agentMaxSteps,
-      agentThinkingDepth: settingForm.value.agentThinkingDepth,
-      agentAutoExecute: settingForm.value.agentAutoExecute === 'true',
-      agentBaseModeAPI: settingForm.value.agentBaseModeAPI,
-      // Pass API credentials based on base mode
-      apiKey: settingForm.value.officialAPIKey,
-      azureAPIKey: settingForm.value.azureAPIKey,
-      azureAPIEndpoint: settingForm.value.azureAPIEndpoint,
-      azureDeploymentName: settingForm.value.azureDeploymentName,
-      azureAPIVersion: settingForm.value.azureAPIVersion,
-      geminiAPIKey: settingForm.value.geminiAPIKey,
-      geminiModel: settingForm.value.geminiCustomModel || settingForm.value.geminiModelSelect,
-      groqAPIKey: settingForm.value.groqAPIKey,
-      groqModel: settingForm.value.groqCustomModel || settingForm.value.groqModelSelect,
-      ollamaEndpoint: settingForm.value.ollamaEndpoint,
-      ollamaModel: settingForm.value.ollamaCustomModel || settingForm.value.ollamaModelSelect,
-      officialModel: settingForm.value.officialCustomModel || settingForm.value.officialModelSelect,
-      officialBasePath: settingForm.value.officialBasePath,
-      messages: historyDialog.value,
-      result,
-      historyDialog,
-      errorIssue,
-      loading,
-      maxTokens: settingForm.value.officialMaxTokens,
-      temperature: settingForm.value.officialTemperature
-    })
   } else {
-    ElMessage.error('Set API Key or Access Token first')
+    ElMessage.error('Set Ollama endpoint first')
     return
   }
   if (errorIssue.value === true) {
@@ -788,15 +614,11 @@ async function template(taskType: keyof typeof buildInPrompt | 'custom') {
 
 function checkApiKey() {
   const auth = {
-    type: settingForm.value.api,
-    apiKey: settingForm.value.officialAPIKey,
-    azureAPIKey: settingForm.value.azureAPIKey,
-    geminiAPIKey: settingForm.value.geminiAPIKey,
-    groqAPIKey: settingForm.value.groqAPIKey,
-    agentBaseModeAPI: settingForm.value.agentBaseModeAPI
-  }
+    type: 'ollama',
+    ollamaEndpoint: settingForm.value.ollamaEndpoint
+  } as any
   if (!checkAuth(auth)) {
-    ElMessage.error('Set API Key or Access Token first')
+    ElMessage.error('Set Ollama endpoint first')
     return false
   }
   return true
@@ -822,156 +644,22 @@ async function continueChat() {
   if (!checkApiKey()) return
   loading.value = true
   try {
-    switch (settingForm.value.api) {
-      case 'official':
-        historyDialog.value.push({
-          role: 'user',
-          content: 'continue'
-        })
-
-        await API.official.createChatCompletionStream({
-          config: API.official.setConfig(
-            settingForm.value.officialAPIKey,
-            settingForm.value.officialBasePath
-          ),
-          messages: historyDialog.value,
-          result,
-          historyDialog,
-          errorIssue,
-          loading,
-          maxTokens: settingForm.value.officialMaxTokens,
-          temperature: settingForm.value.officialTemperature,
-          model:
-            settingForm.value.officialCustomModel ||
-            settingForm.value.officialModelSelect
-        })
-        break
-      case 'groq':
-        historyDialog.value.push({
-          role: 'user',
-          content: 'continue'
-        })
-        await API.groq.createChatCompletionStream({
-          groqAPIKey: settingForm.value.groqAPIKey,
-          groqModel:
-            settingForm.value.groqCustomModel ||
-            settingForm.value.groqModelSelect,
-          messages: historyDialog.value,
-          result,
-          historyDialog,
-          errorIssue,
-          loading,
-          maxTokens: settingForm.value.officialMaxTokens,
-          temperature: settingForm.value.officialTemperature
-        })
-        break
-      case 'azure':
-        historyDialog.value.push({
-          role: 'user',
-          content: 'continue'
-        })
-        await API.azure.createChatCompletionStream({
-          azureAPIKey: settingForm.value.azureAPIKey,
-          azureAPIEndpoint: settingForm.value.azureAPIEndpoint,
-          azureDeploymentName: settingForm.value.azureDeploymentName,
-          azureAPIVersion: settingForm.value.azureAPIVersion,
-          messages: historyDialog.value,
-          result,
-          historyDialog,
-          errorIssue,
-          loading,
-          maxTokens: settingForm.value.azureMaxTokens,
-          temperature: settingForm.value.azureTemperature
-        })
-        break
-      case 'gemini':
-        historyDialog.value.push(
-          ...[
-            {
-              role: 'user',
-              parts: [
-                {
-                  text: 'continue'
-                }
-              ]
-            },
-            {
-              role: 'model',
-              parts: [
-                {
-                  text: 'OK, I will continue to help you.'
-                }
-              ]
-            }
-          ]
-        )
-        await API.gemini.createChatCompletionStream({
-          geminiAPIKey: settingForm.value.geminiAPIKey,
-          messages: 'continue',
-          result,
-          historyDialog,
-          errorIssue,
-          loading,
-          maxTokens: settingForm.value.geminiMaxTokens,
-          temperature: settingForm.value.geminiTemperature,
-          geminiModel:
-            settingForm.value.geminiCustomModel ||
-            settingForm.value.geminiModelSelect
-        })
-        break
-      case 'ollama':
-        historyDialog.value.push({
-          role: 'user',
-          content: 'continue'
-        })
-        await API.ollama.createChatCompletionStream({
-          ollamaEndpoint: settingForm.value.ollamaEndpoint,
-          ollamaModel:
-            settingForm.value.ollamaCustomModel ||
-            settingForm.value.ollamaModelSelect,
-          messages: historyDialog.value,
-          result,
-          historyDialog,
-          errorIssue,
-          loading,
-          temperature: settingForm.value.ollamaTemperature
-        })
-        break
-      case 'agent':
-        historyDialog.value.push({
-          role: 'user',
-          content: 'continue'
-        })
-        await API.agent.createChatCompletionStream({
-          agentMode: settingForm.value.agentMode,
-          agentMaxSteps: settingForm.value.agentMaxSteps,
-          agentThinkingDepth: settingForm.value.agentThinkingDepth,
-          agentAutoExecute: settingForm.value.agentAutoExecute === 'true',
-          agentBaseModeAPI: settingForm.value.agentBaseModeAPI,
-          // Pass API credentials based on base mode
-          apiKey: settingForm.value.officialAPIKey,
-          azureAPIKey: settingForm.value.azureAPIKey,
-          azureAPIEndpoint: settingForm.value.azureAPIEndpoint,
-          azureDeploymentName: settingForm.value.azureDeploymentName,
-          azureAPIVersion: settingForm.value.azureAPIVersion,
-          geminiAPIKey: settingForm.value.geminiAPIKey,
-          geminiModel: settingForm.value.geminiCustomModel || settingForm.value.geminiModelSelect,
-          groqAPIKey: settingForm.value.groqAPIKey,
-          groqModel: settingForm.value.groqCustomModel || settingForm.value.groqModelSelect,
-          ollamaEndpoint: settingForm.value.ollamaEndpoint,
-          ollamaModel: settingForm.value.ollamaCustomModel || settingForm.value.ollamaModelSelect,
-          officialModel: settingForm.value.officialCustomModel || settingForm.value.officialModelSelect,
-          officialBasePath: settingForm.value.officialBasePath,
-          messages: historyDialog.value,
-          result,
-          historyDialog,
-          errorIssue,
-          loading,
-          maxTokens: settingForm.value.officialMaxTokens,
-          temperature: settingForm.value.officialTemperature
-        })
-        break
-    }
+    historyDialog.value.push({
+      role: 'user',
+      content: 'continue'
+    })
+    await API.ollama.createChatCompletionStream({
+      ollamaEndpoint: settingForm.value.ollamaEndpoint,
+      ollamaModel:
+        settingForm.value.ollamaCustomModel ||
+        settingForm.value.ollamaModelSelect,
+      messages: historyDialog.value,
+      result,
+      historyDialog,
+      errorIssue,
+      loading,
+      temperature: settingForm.value.ollamaTemperature
+    })
   } catch (error) {
     result.value = String(error)
     errorIssue.value = true
@@ -992,6 +680,7 @@ async function continueChat() {
 onBeforeMount(() => {
   addWatch()
   initData()
+  loadOllamaModels()
 })
 </script>
 
