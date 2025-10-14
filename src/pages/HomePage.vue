@@ -6,13 +6,23 @@
         <Zap class="brand-icon" />
         <h1 class="brand-title">Word GPT+</h1>
       </div>
-      <button 
-        class="settings-btn"
-        @click="settings"
-        :disabled="loading"
-      >
-        <Settings class="icon" />
-      </button>
+      <div class="actions">
+        <button 
+          class="settings-btn user-btn"
+          @click="userPage"
+          :disabled="loading"
+        >
+          <User class="icon" />
+          <span class="username-text">{{ username }}</span>
+        </button>
+        <button 
+          class="settings-btn"
+          @click="settings"
+          :disabled="loading"
+        >
+          <Settings class="icon" />
+        </button>
+      </div>
     </div>
 
     <!-- Word Info -->
@@ -29,13 +39,12 @@
         Lấy thông tin Word
       </button>
       <button 
-        v-if="true"
         class="secondary-btn"
-        @click="continueChat"
+        @click="formatDocument"
         :disabled="loading"
       >
         <ArrowRight class="icon" />
-        {{ $t('continue') }}
+        Format văn bản
       </button>
     </div>
         <div class="section">
@@ -61,65 +70,6 @@
       </div>
     </div>
 
-    <!-- Quick Settings - Collapsible -->
-    <div class="collapsible-section">
-      <div class="collapsible-header" @click="quickSettingsExpanded = !quickSettingsExpanded">
-        <div class="collapsible-title">
-          <Sliders class="collapsible-icon" />
-          Quick Settings
-        </div>
-        <ChevronDown class="collapse-icon" :class="{ expanded: quickSettingsExpanded }" />
-      </div>
-      <div class="collapsible-content" :class="{ expanded: quickSettingsExpanded }">
-        <div class="settings-grid">
-        <div class="settings-row">
-          <!-- API selection removed: app is now Ollama-only -->
-          <div class="setting-item">
-            <label class="setting-label">{{ $t('modelLabel') }}</label>
-            <div class="select-wrapper">
-              <select v-model="currentModelSelect" class="select-input" :disabled="!currentModelOptions || currentModelOptions.length === 0">
-                <option v-for="item in currentModelOptions" :key="item.value" :value="item.value">
-                  {{ item.label }}
-                </option>
-              </select>
-              <ChevronDown class="select-icon" />
-            </div>
-          </div>
-        </div>
-        <div class="settings-row">
-          <div class="setting-item">
-            <label class="setting-label">{{ $t('insertTypeLabel') }}</label>
-            <div class="select-wrapper">
-              <select v-model="insertType" class="select-input" @change="(e) => handleInsertTypeChange((e.target as HTMLSelectElement)?.value as insertTypes)">
-                <option v-for="item in insertTypeList" :key="item.value" :value="item.value">
-                  {{ item.label }}
-                </option>
-              </select>
-              <ChevronDown class="select-icon" />
-            </div>
-          </div>
-          <!-- <div class="setting-item">
-            <label class="setting-label">{{ $t('useWordFormattingLabel') }}</label>
-            <div class="toggle-wrapper">
-              <input type="checkbox" v-model="useWordFormatting" class="toggle-input" @change="(e) => handleWordFormattingChange((e.target as HTMLInputElement)?.checked ?? false)" />
-              <div class="toggle-slider"></div>
-            </div>
-          </div> -->
-        </div>
-        <div class="setting-item">
-          <label class="setting-label">{{ $t('replyLanguageLabel') }}</label>
-          <div class="select-wrapper">
-            <select v-model="settingForm.replyLanguage" class="select-input">
-              <option v-for="item in settingPreset.replyLanguage.optionList" :key="item.value" :value="item.value">
-                {{ item.label }}
-              </option>
-            </select>
-            <ChevronDown class="select-icon" />
-          </div>
-        </div>
-        </div>
-      </div>
-    </div>
 
     <!-- AI Tools - Collapsible -->
     <div class="collapsible-section">
@@ -285,12 +235,12 @@ import {
   Play,
   ArrowRight,
   Loader2,
-  Sliders,
   ChevronDown,
   MessageSquare,
   Zap,
   RefreshCw
 } from 'lucide-vue-next'
+import { User } from 'lucide-vue-next'
 import { onBeforeMount, ref, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -313,8 +263,14 @@ const { t } = useI18n()
 
 const { settingForm } = useSettingForm()
 
+// Username hiển thị cạnh icon User
+const username = ref('')
+onBeforeMount(() => {
+  const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('authUsername') : ''
+  username.value = saved || (import.meta.env?.DEV ? 'demo' : 'User')
+})
+
 // Collapsible section states
-const quickSettingsExpanded = ref(false)
 const aiToolsExpanded = ref(true)
 const promptsExpanded = ref(false)
 
@@ -527,13 +483,13 @@ async function loadOllamaModels() {
       if (!exists) {
         settingForm.value.ollamaModelSelect = models[0].value
       }
-      ElMessage.success(`Đã nạp ${models.length} models từ Ollama`)
+      // Không hiển thị thông báo thành công để tránh gây nhiễu
     } else {
       ElMessage.warning('Không tìm thấy model từ endpoint Ollama')
     }
   } catch (e) {
     console.error('Load Ollama models failed:', e)
-    ElMessage.error('Nạp models thất bại. Kiểm tra kết nối/endpoint')
+    ElMessage.warning('Nạp models thất bại. Kiểm tra kết nối/endpoint')
   }
 }
 
@@ -635,6 +591,10 @@ function settings() {
   router.push('/settings')
 }
 
+function userPage() {
+  router.push('/user')
+}
+
 function StartChat() {
   if (!checkApiKey()) return
   template('custom')
@@ -674,6 +634,103 @@ async function continueChat() {
     API.common.insertFormattedResult(result, insertType)
   } else {
     API.common.insertResult(result, insertType)
+  }
+}
+
+// Format document using mock format JSON
+async function formatDocument() {
+  try {
+    loading.value = true
+    const config = await API.mock.getFormatConfig()
+    await Word.run(async (context) => {
+      // Xoá toàn bộ nội dung và bắt đầu từ đầu trang
+      const body = context.document.body
+      const fullRange = body.getRange()
+      fullRange.clear()
+      let insertionPoint = body.getRange('Start')
+
+      // Helper to insert a styled paragraph
+      const insertStyledParagraph = (text: string, style?: string) => {
+        const p = insertionPoint.insertParagraph(text || '', 'After')
+        switch (style) {
+          case 'heading1': p.styleBuiltIn = 'Heading1'; break
+          case 'heading2': p.styleBuiltIn = 'Heading2'; break
+          case 'heading3': p.styleBuiltIn = 'Heading3'; break
+          case 'heading4': p.styleBuiltIn = 'Heading4'; break
+          case 'heading5': p.styleBuiltIn = 'Heading5'; break
+          case 'heading6': p.styleBuiltIn = 'Heading6'; break
+          case 'quote': p.styleBuiltIn = 'Quote'; p.font.italic = true; break
+          case 'code': p.styleBuiltIn = 'NoSpacing'; p.font.name = 'Consolas'; p.font.color = '#d63384'; break
+          case 'bold': p.font.bold = true; break
+          case 'italic': p.font.italic = true; break
+        }
+        // Áp dụng defaults nếu có (cho đoạn văn thường)
+        const d = config?.defaults || {}
+        if (!style || (style !== 'heading1' && style !== 'heading2' && style !== 'heading3' && style !== 'heading4' && style !== 'heading5' && style !== 'heading6')) {
+          if (d.fontName) p.font.name = d.fontName
+          if (typeof d.fontSize === 'number') p.font.size = d.fontSize
+          if (typeof d.spaceAfter === 'number') p.spaceAfter = d.spaceAfter
+          if (typeof d.spaceBefore === 'number') p.spaceBefore = d.spaceBefore
+        }
+        insertionPoint = p.getRange('End')
+      }
+
+      // Tiêu đề tài liệu (nếu có)
+      if (config.title) {
+        const titleP = insertionPoint.insertParagraph(config.title, 'After')
+        titleP.styleBuiltIn = 'Heading1'
+        insertionPoint = titleP.getRange('End')
+      }
+
+      for (const block of config.blocks) {
+        if (block.type === 'heading') {
+          const p = insertionPoint.insertParagraph(block.text || '', 'After')
+          p.styleBuiltIn = `Heading${block.level}` as any
+          insertionPoint = p.getRange('End')
+        } else if (block.type === 'paragraph') {
+          const styles = (block.styles || [])
+          if (!styles.length) {
+            insertStyledParagraph(block.text)
+          } else {
+            // Áp dụng lần lượt các style được chỉ định
+            let tempText = block.text
+            for (const s of styles) {
+              insertStyledParagraph(tempText, s)
+              tempText = '' // các style sau áp dụng trên đoạn rỗng kế tiếp
+            }
+          }
+        } else if (block.type === 'quote') {
+          insertStyledParagraph(block.text, 'quote')
+        } else if (block.type === 'code') {
+          insertStyledParagraph(block.text, 'code')
+        } else if (block.type === 'list') {
+          let numberIndex = 1
+          for (const item of block.items) {
+            const prefix = block.listType === 'bullet' ? '• ' : `${numberIndex}. `
+            const p = insertionPoint.insertParagraph(prefix + (item.text || ''), 'After')
+            p.styleBuiltIn = 'ListParagraph'
+            // indent levels in Word API start at 0
+            const level = (item.level || 1) - 1
+            try { p.listItem.level = level } catch {}
+            // Defaults cho danh sách
+            const d = config?.defaults || {}
+            if (d.fontName) p.font.name = d.fontName
+            if (typeof d.fontSize === 'number') p.font.size = d.fontSize
+            if (typeof d.spaceAfter === 'number') p.spaceAfter = d.spaceAfter
+            if (typeof d.spaceBefore === 'number') p.spaceBefore = d.spaceBefore
+            insertionPoint = p.getRange('End')
+            if (block.listType === 'number') numberIndex++
+          }
+        }
+      }
+
+      await context.sync()
+    })
+  } catch (e) {
+    console.error('Format document failed:', e)
+    ElMessage.error('Định dạng văn bản thất bại: ' + String(e))
+  } finally {
+    loading.value = false
   }
 }
 

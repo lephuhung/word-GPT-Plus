@@ -81,6 +81,8 @@ async function onSubmit() {
   }
   if (res.token) {
     localStorage.setItem('authToken', res.token)
+    // Lưu username để hiển thị trên Home
+    localStorage.setItem('authUsername', username.value)
   }
   router.push('/')
 }

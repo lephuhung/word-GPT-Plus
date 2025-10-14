@@ -19,6 +19,11 @@ const router = createRouter({
       component: () => import('../pages/SettingsPage.vue')
     },
     {
+      path: '/user',
+      name: 'User',
+      component: () => import('../pages/UserPage.vue')
+    },
+    {
       path: '/:pathMatch(.*)*',
       redirect: '/'
     }
@@ -26,6 +31,14 @@ const router = createRouter({
 })
 
 router.beforeEach((to, _from, next) => {
+  // Bypass login ở chế độ dev hoặc khi bật cờ ép bypass
+  const isDev = import.meta.env.DEV || import.meta.env.MODE === 'development'
+  const forceBypass =
+    typeof localStorage !== 'undefined' && localStorage.getItem('DEV_BYPASS_LOGIN') === '1'
+  if (isDev || forceBypass) {
+    next()
+    return
+  }
   const token = typeof localStorage !== 'undefined' ? localStorage.getItem('authToken') : null
   if (!token && to.path !== '/login') {
     next('/login')

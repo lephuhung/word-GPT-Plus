@@ -13,7 +13,7 @@
     "useDefineForClassFields": true,
     "sourceMap": true,
     "baseUrl": ".",
-    "types": ["office-js"],
+    "types": ["office-js", "vite/client"],
     "paths": {
       "@/*": ["src/*"]
     },

@@ -5,6 +5,7 @@ import gemini from './gemini'
 import groq from './groq'
 import ollama from './ollama'
 import agent from './agent'
+import mock from './mock'
 
 export default {
   official,
@@ -13,5 +14,6 @@ export default {
   groq,
   common,
   ollama,
-  agent
+  agent,
+  mock
 }

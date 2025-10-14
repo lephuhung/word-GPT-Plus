@@ -85,7 +85,7 @@ export const settingPreset: Record<SettingNames, ISettingOption> = {
     type: 'select',
     optionList: optionLists.localLanguageList,
     saveFunc: (value: string) => {
-      i18n.global.locale.value = value as 'en' | 'zh-cn'
+      i18n.global.locale.value = value as 'en' | 'vi'
       localStorage.setItem(localStorageKey.localLanguage, value)
     }
   },

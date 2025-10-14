@@ -40,7 +40,8 @@ export function getOptionList(
 
 const localLanguageList = [
   { label: 'English', value: 'en' },
-  { label: '简体中文', value: 'zh-cn' }
+  { label: '简体中文', value: 'zh-cn' },
+  { label: 'Tiếng Việt', value: 'vi' }
 ]
 
 export const optionLists = {

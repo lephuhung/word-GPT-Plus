@@ -62,71 +62,27 @@
             </div>
           </div>
         </div>
-        <div class="setting-item full-width">
-          <label class="setting-label">{{ $t('apiLabel') }}</label>
-          <div class="select-wrapper">
-            <select 
-              v-model="settingForm.api"
-              class="select-input"
-            >
-              <option value="" disabled>{{ getPlaceholder('api') }}</option>
-              <option
-                v-for="item in settingPreset.api.optionList"
-                :key="item.value"
-                :value="item.value"
-              >
-                {{ item.label }}
-              </option>
-            </select>
-            <ChevronDown class="select-icon" />
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- API Configuration Sections -->
-    <div
-      v-for="platform in Object.keys(availableAPIs)"
-      v-show="settingForm.api === platform"
-      :key="platform"
-      class="section"
-    >
-      <div class="section-header">
-        <Settings class="section-icon" />
-        <h2 class="section-title">{{ platform.toUpperCase() }} {{ $t('configuration') || 'Configuration' }}</h2>
-      </div>
-      <div class="settings-content">
-        <!-- Input Settings -->
-        <template
-          v-for="item in getApiInputSettings(platform)"
-          :key="item"
-        >
+        <!-- Ollama Configuration (moved into Quick Settings) -->
+        <div class="settings-row">
           <div class="setting-item">
-            <label class="setting-label">{{ $t(getLabel(item)) }}</label>
+            <label class="setting-label">{{ $t(getLabel('ollamaEndpoint')) }}</label>
             <input
-              v-model="settingForm[item as SettingNames]"
+              v-model="settingForm.ollamaEndpoint"
               class="text-input"
-              :type="item.toLowerCase().includes('key') || item.toLowerCase().includes('token') ? 'password' : 'text'"
-              :placeholder="$t(getPlaceholder(item))"
+              type="text"
+              :placeholder="$t(getPlaceholder('ollamaEndpoint'))"
             />
           </div>
-        </template>
-
-        <!-- Select Settings -->
-        <template
-          v-for="item in getApiSelectSettings(platform)"
-          :key="item"
-        >
           <div class="setting-item">
-            <label class="setting-label">{{ $t(getLabel(item)) }}</label>
+            <label class="setting-label">{{ $t(getLabel('ollamaModelSelect')) }}</label>
             <div class="select-wrapper">
               <select 
-                v-model="settingForm[item as SettingNames]"
+                v-model="settingForm.ollamaModelSelect"
                 class="select-input"
               >
-                <option value="" disabled>{{ $t(getPlaceholder(item)) }}</option>
+                <option value="" disabled>{{ $t(getPlaceholder('ollamaModelSelect')) }}</option>
                 <option
-                  v-for="option in settingPreset[item as SettingNames].optionList"
+                  v-for="option in settingPreset.ollamaModelSelect.optionList"
                   :key="option.value"
                   :value="option.value"
                 >
@@ -136,40 +92,52 @@
               <ChevronDown class="select-icon" />
             </div>
           </div>
-        </template>
+        </div>
+        <div class="setting-item full-width">
+          <label class="setting-label">{{ $t(getLabel('ollamaTemperature')) }}</label>
+          <input
+            v-model.number="settingForm.ollamaTemperature"
+            class="number-input"
+            type="number"
+            min="0"
+            max="2"
+            step="0.1"
+            :placeholder="$t(getPlaceholder('ollamaTemperature'))"
+          />
+        </div>
 
-        <!-- Number Settings -->
-        <template
-          v-for="item in getApiNumSettings(platform)"
-          :key="item"
-        >
-          <div class="setting-item">
-            <label class="setting-label">{{ $t(getLabel(item)) }}</label>
-            <input
-              v-model.number="settingForm[item as SettingNames]"
-              class="number-input"
-              type="number"
-              :min="0"
-              :max="item.includes('Temperature') ? 2 : 4000"
-              :step="item.includes('Temperature') ? 0.1 : 1"
-              :placeholder="$t(getPlaceholder(item))"
-            />
+        <!-- Insert type -->
+        <div class="setting-item full-width">
+          <label class="setting-label">{{ $t('insertTypeLabel') }}</label>
+          <div class="select-wrapper">
+            <select 
+              v-model="insertType"
+              class="select-input"
+              @change="(e) => handleInsertTypeChange((e.target as HTMLSelectElement)?.value as insertTypes)"
+            >
+              <option v-for="item in insertTypeList" :key="item.value" :value="item.value">
+                {{ item.label }}
+              </option>
+            </select>
+            <ChevronDown class="select-icon" />
           </div>
-        </template>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { onBeforeMount, watch } from 'vue'
+import { onBeforeMount, watch, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Settings, ArrowLeft, Sliders, ChevronDown } from 'lucide-vue-next'
+import { ElMessage } from 'element-plus'
+import API from '@/api'
 
 import { getLabel, getPlaceholder } from '@/utils/common'
-import { availableAPIs } from '@/utils/constant'
 import { SettingNames, settingPreset } from '@/utils/settingPreset'
 import useSettingForm from '@/utils/settingForm'
+import { localStorageKey } from '@/utils/enum'
 
 const router = useRouter()
 const { settingForm, settingFormKeys } = useSettingForm()
@@ -218,11 +186,61 @@ const addWatch = () => {
 
 onBeforeMount(() => {
   addWatch()
+  // Luôn mặc định dùng Ollama và tự nạp models nếu có endpoint
+  if (settingForm.value.api !== 'ollama') {
+    settingForm.value.api = 'ollama'
+  }
+  if ((settingForm.value.ollamaEndpoint || '').trim()) {
+    loadOllamaModels()
+  }
 })
 
 function backToHome() {
   router.push('/')
 }
+
+// Insert Type control
+const insertType = ref<insertTypes>((localStorage.getItem(localStorageKey.insertType) as insertTypes) || 'replace')
+const insertTypeList = ['replace', 'append', 'newLine', 'NoAction'].map(item => ({ label: item, value: item }))
+function handleInsertTypeChange(val: insertTypes) {
+  insertType.value = val
+  localStorage.setItem(localStorageKey.insertType, val)
+}
+
+// Load Ollama models
+async function loadOllamaModels() {
+  try {
+    const endpoint = (settingForm.value.ollamaEndpoint || '').trim()
+    if (!endpoint) {
+      ElMessage.warning('Vui lòng cấu hình Ollama endpoint trước')
+      return
+    }
+    const models = await API.ollama.listModels(endpoint)
+    if (models && models.length > 0) {
+      settingPreset.ollamaModelSelect.optionList = models
+      const current = settingForm.value.ollamaModelSelect
+      const exists = models.some(m => m.value === current)
+      if (!exists) {
+        settingForm.value.ollamaModelSelect = models[0].value
+      }
+      // Không hiển thị thông báo thành công để tránh gây nhiễu
+    } else {
+      ElMessage.warning('Không tìm thấy model từ endpoint Ollama')
+    }
+  } catch (e) {
+    console.error('Load Ollama models failed:', e)
+    ElMessage.warning('Nạp models thất bại. Kiểm tra kết nối/endpoint')
+  }
+}
+
+watch(
+  () => settingForm.value.ollamaEndpoint,
+  (val, oldVal) => {
+    if (val && val !== oldVal) {
+      loadOllamaModels()
+    }
+  }
+)
 </script>
 
 <style scoped>
