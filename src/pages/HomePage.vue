@@ -637,102 +637,142 @@ async function continueChat() {
   }
 }
 
-// Format document using mock format JSON
-async function formatDocument() {
+// Format toàn bộ văn bản: áp dụng font và khoảng cách cho các đoạn, không xoá nội dung
+async function formatDocument(includeHeader = true) {
   try {
-    loading.value = true
-    const config = await API.mock.getFormatConfig()
+    loading.value = true;
     await Word.run(async (context) => {
-      // Xoá toàn bộ nội dung và bắt đầu từ đầu trang
-      const body = context.document.body
-      const fullRange = body.getRange()
-      fullRange.clear()
-      let insertionPoint = body.getRange('Start')
+      const body = context.document.body;
+      const cmToPoints = (cm: number) => Math.round(cm * 28.346);
 
-      // Helper to insert a styled paragraph
-      const insertStyledParagraph = (text: string, style?: string) => {
-        const p = insertionPoint.insertParagraph(text || '', 'After')
-        switch (style) {
-          case 'heading1': p.styleBuiltIn = 'Heading1'; break
-          case 'heading2': p.styleBuiltIn = 'Heading2'; break
-          case 'heading3': p.styleBuiltIn = 'Heading3'; break
-          case 'heading4': p.styleBuiltIn = 'Heading4'; break
-          case 'heading5': p.styleBuiltIn = 'Heading5'; break
-          case 'heading6': p.styleBuiltIn = 'Heading6'; break
-          case 'quote': p.styleBuiltIn = 'Quote'; p.font.italic = true; break
-          case 'code': p.styleBuiltIn = 'NoSpacing'; p.font.name = 'Consolas'; p.font.color = '#d63384'; break
-          case 'bold': p.font.bold = true; break
-          case 'italic': p.font.italic = true; break
+      // (Bỏ qua) Thiết lập khổ giấy/margin: Word JS API không hỗ trợ trực tiếp
+
+      // 2️⃣ Thêm tiêu ngữ
+      if (includeHeader) {
+        const table = body.insertTable(2, 2, Word.InsertLocation.start, [
+          [
+            "UBND TỈNH HÀ TĨNH\nSỞ VĂN HÓA, THỂ THAO VÀ DU LỊCH",
+            "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM\nĐộc lập - Tự do - Hạnh phúc",
+          ],
+          [
+            "Số: 2044 / SVHTTDL-VP\nVề việc hướng dẫn thực hiện công tác phổ biến, giáo dục pháp luật quý III năm 2025",
+            "Hà Tĩnh, ngày  tháng  năm 20",
+          ],
+        ]);
+
+        table.alignment = "Centered";
+
+        const rows = table.rows;
+        rows.load("items");
+        await context.sync();
+
+        // Hàng 1
+        const [row1, row2] = rows.items;
+
+        // Phải load cells trước khi truy cập items
+        row1.cells.load("items");
+        row2.cells.load("items");
+        await context.sync();
+
+        const [left1, right1] = row1.cells.items;
+        const [left2, right2] = row2.cells.items;
+
+        // Căn giữa và format hàng đầu tiên
+        left1.body.paragraphs.load("items");
+        await context.sync();
+        for (const p of left1.body.paragraphs.items) {
+          p.font.name = "Times New Roman";
+          p.font.size = 14;
+          p.font.bold = true;
+          p.alignment = "Centered";
         }
-        // Áp dụng defaults nếu có (cho đoạn văn thường)
-        const d = config?.defaults || {}
-        if (!style || (style !== 'heading1' && style !== 'heading2' && style !== 'heading3' && style !== 'heading4' && style !== 'heading5' && style !== 'heading6')) {
-          if (d.fontName) p.font.name = d.fontName
-          if (typeof d.fontSize === 'number') p.font.size = d.fontSize
-          if (typeof d.spaceAfter === 'number') p.spaceAfter = d.spaceAfter
-          if (typeof d.spaceBefore === 'number') p.spaceBefore = d.spaceBefore
+
+        right1.body.paragraphs.load("items");
+        await context.sync();
+        for (const p of right1.body.paragraphs.items) {
+          p.font.name = "Times New Roman";
+          p.font.size = 14;
+          p.font.bold = true;
+          p.alignment = "Centered";
         }
-        insertionPoint = p.getRange('End')
+
+        // Gạch chân dòng thứ hai trong cột phải (Độc lập...)
+        const parasRight1 = right1.body.paragraphs;
+        parasRight1.load("items");
+        await context.sync();
+        if (parasRight1.items.length > 1) {
+          parasRight1.items[1].font.underline = "Single";
+        }
+
+        // Hàng 2: số văn bản và ngày tháng
+        left2.body.paragraphs.load("items");
+        await context.sync();
+        for (const p of left2.body.paragraphs.items) {
+          p.font.name = "Times New Roman";
+          p.font.size = 14;
+          p.alignment = "Left";
+        }
+
+        const parasLeft2 = left2.body.paragraphs;
+        parasLeft2.load("items");
+        await context.sync();
+        if (parasLeft2.items.length > 0) {
+          parasLeft2.items[0].font.bold = true; // "Số: ..."
+        }
+        if (parasLeft2.items.length > 1) {
+          parasLeft2.items[1].font.italic = true; // "Về việc ..."
+        }
+
+        right2.body.paragraphs.load("items");
+        await context.sync();
+        for (const p of right2.body.paragraphs.items) {
+          p.font.name = "Times New Roman";
+          p.font.size = 14;
+          p.font.italic = true;
+          p.alignment = "Centered";
+        }
       }
 
-      // Tiêu đề tài liệu (nếu có)
-      if (config.title) {
-        const titleP = insertionPoint.insertParagraph(config.title, 'After')
-        titleP.styleBuiltIn = 'Heading1'
-        insertionPoint = titleP.getRange('End')
+      // 3️⃣ Định dạng toàn văn bản
+      const whole = body.getRange();
+      whole.font.name = "Times New Roman";
+      whole.font.size = 14;
+
+      const paragraphs = body.paragraphs;
+      paragraphs.load("items");
+      await context.sync();
+
+      const parentTables = paragraphs.items.map((p) => (p as any).parentTableOrNullObject);
+      await context.sync();
+
+      for (let i = 0; i < paragraphs.items.length; i++) {
+        const p = paragraphs.items[i];
+        const parentTable = parentTables[i];
+        if (parentTable && !parentTable.isNullObject) continue; // bỏ qua tiêu ngữ
+        p.alignment = "Justified";
+        p.leftIndent = cmToPoints(2);
+        p.rightIndent = cmToPoints(3);
+        p.firstLineIndent = cmToPoints(1);
+        // Word JS không hỗ trợ đặt hệ số dòng trực tiếp; dùng điểm tương đương ~1.15
+        p.lineSpacing = 13.8;
+        p.spaceBefore = 0;
+        p.spaceAfter = 0;
       }
 
-      for (const block of config.blocks) {
-        if (block.type === 'heading') {
-          const p = insertionPoint.insertParagraph(block.text || '', 'After')
-          p.styleBuiltIn = `Heading${block.level}` as any
-          insertionPoint = p.getRange('End')
-        } else if (block.type === 'paragraph') {
-          const styles = (block.styles || [])
-          if (!styles.length) {
-            insertStyledParagraph(block.text)
-          } else {
-            // Áp dụng lần lượt các style được chỉ định
-            let tempText = block.text
-            for (const s of styles) {
-              insertStyledParagraph(tempText, s)
-              tempText = '' // các style sau áp dụng trên đoạn rỗng kế tiếp
-            }
-          }
-        } else if (block.type === 'quote') {
-          insertStyledParagraph(block.text, 'quote')
-        } else if (block.type === 'code') {
-          insertStyledParagraph(block.text, 'code')
-        } else if (block.type === 'list') {
-          let numberIndex = 1
-          for (const item of block.items) {
-            const prefix = block.listType === 'bullet' ? '• ' : `${numberIndex}. `
-            const p = insertionPoint.insertParagraph(prefix + (item.text || ''), 'After')
-            p.styleBuiltIn = 'ListParagraph'
-            // indent levels in Word API start at 0
-            const level = (item.level || 1) - 1
-            try { p.listItem.level = level } catch {}
-            // Defaults cho danh sách
-            const d = config?.defaults || {}
-            if (d.fontName) p.font.name = d.fontName
-            if (typeof d.fontSize === 'number') p.font.size = d.fontSize
-            if (typeof d.spaceAfter === 'number') p.spaceAfter = d.spaceAfter
-            if (typeof d.spaceBefore === 'number') p.spaceBefore = d.spaceBefore
-            insertionPoint = p.getRange('End')
-            if (block.listType === 'number') numberIndex++
-          }
-        }
-      }
+      await context.sync();
+    });
 
-      await context.sync()
-    })
+    ElMessage.success("Định dạng văn bản + tiêu ngữ hoàn tất!");
   } catch (e) {
-    console.error('Format document failed:', e)
-    ElMessage.error('Định dạng văn bản thất bại: ' + String(e))
+    console.error("Format document failed:", e);
+    ElMessage.error("Định dạng văn bản thất bại: " + String(e));
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
+
+
+
 
 onBeforeMount(() => {
   addWatch()
