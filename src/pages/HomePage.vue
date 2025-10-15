@@ -7,53 +7,49 @@
         <h1 class="brand-title">Word GPT+</h1>
       </div>
       <div class="actions">
-        <button 
-          class="settings-btn user-btn"
-          @click="userPage"
-          :disabled="loading"
-        >
+        <button class="settings-btn user-btn" @click="userPage" :disabled="loading">
           <User class="icon" />
           <span class="username-text">{{ username }}</span>
         </button>
-        <button 
-          class="settings-btn"
-          @click="settings"
-          :disabled="loading"
-        >
+        <button class="settings-btn" @click="settings" :disabled="loading">
           <Settings class="icon" />
         </button>
       </div>
     </div>
-
-    <!-- Word Info -->
-
-
     <!-- Main Actions -->
     <div class="main-actions">
-      <button 
-        class="primary-btn"
-        @click="handleGetWordInfo"
-        :disabled="loading"
-      >
+      <button class="primary-btn" @click="handleGetWordInfo" :disabled="loading">
         <FileText class="icon" />
         Lấy thông tin Word
       </button>
-      <button 
-        class="secondary-btn"
-        @click="formatOptionsExpanded = !formatOptionsExpanded"
-        :disabled="loading"
-      >
+      <button class="secondary-btn" @click="formatOptionsExpanded = !formatOptionsExpanded" :disabled="loading">
         <ArrowRight class="icon" />
         Định dạng văn bản
       </button>
     </div>
-
+    <!-- Word Info -->
+    <!-- <div class="collapsible-section">
+      <div class="collapsible-header" @click="wordInfoExpanded = !wordInfoExpanded">
+        <div class="collapsible-title">
+          <Info class="collapsible-icon" />
+          <span>Word Info</span>
+        </div>
+        <ChevronDown class="collapse-icon" :class="{ expanded: wordInfoExpanded }" />
+      </div>
+      <div :class="['collapsible-content', { expanded: wordInfoExpanded }]">
+        <div class="settings-grid">
+          <div class="setting-item">
+            <textarea class="result-textarea" v-model="wordInfo" readonly></textarea>
+          </div>
+        </div>
+      </div>
+    </div> -->
     <!-- Format Options - Collapsible -->
     <div class="collapsible-section format-collapse">
       <div class="collapsible-header" @click="formatOptionsExpanded = !formatOptionsExpanded">
         <div class="collapsible-title">
           <Settings class="collapsible-icon" />
-           <h2 class="section-title">Tùy chọn định dạng</h2>
+          <h2 class="section-title">Tùy chọn định dạng</h2>
         </div>
         <ChevronDown class="collapse-icon" :class="{ expanded: formatOptionsExpanded }" />
       </div>
@@ -71,19 +67,13 @@
         </div>
       </div>
     </div>
-        <div class="section">
+    <div class="section">
       <div class="section-header">
         <FileText class="section-icon" />
         <h2 class="section-title">Thông tin Word</h2>
       </div>
-      <textarea 
-        v-if="wordInfo"
-        :value="wordInfo"
-        class="result-textarea"
-        placeholder="Thông tin Word"
-        rows="8"
-        readonly
-      ></textarea>
+      <textarea v-if="wordInfo" :value="wordInfo" class="result-textarea" placeholder="Thông tin Word" rows="8"
+        readonly></textarea>
     </div>
 
     <!-- Progress Indicator -->
@@ -95,174 +85,57 @@
     </div>
 
 
-    <!-- AI Tools - Collapsible -->
-    <div class="collapsible-section">
-      <div class="collapsible-header" @click="aiToolsExpanded = !aiToolsExpanded">
-        <div class="collapsible-title">
-          <Sparkles class="collapsible-icon" />
-          {{ $t('aiTools') }}
-        </div>
-        <ChevronDown class="collapse-icon" :class="{ expanded: aiToolsExpanded }" />
+    <!-- Khung chat toàn trang -->
+    <div class="section chat-section">
+      <div class="section-header">
+        <MessageSquare class="section-icon" />
+        <h2 class="section-title">Cuộc trò chuyện</h2>
+        <span class="selection-count" v-if="selectedWordCount > 0">Đã bôi đen: {{ selectedWordCount }} từ</span>
       </div>
-      <div class="collapsible-content" :class="{ expanded: aiToolsExpanded }">
-        <div class="action-grid">
-          <button 
-            v-for="item in actionList"
-            :key="item"
-            class="action-btn"
-            @click="performAction(item)"
-            :disabled="loading"
-          >
-            {{ $t(item) }}
+      <div class="chat-window">
+        <div v-for="(msg, idx) in historyDialog" :key="idx"
+          :class="['chat-msg', msg.role === 'assistant' ? 'assistant' : 'user']">
+          <div class="chat-meta">{{ msg.role === 'assistant' ? 'Bot' : 'Bạn' }}</div>
+          <pre class="chat-content">{{ msg.content }}</pre>
+        </div>
+        <div v-if="historyDialog.length === 0" class="chat-empty">Chưa có tin nhắn. Hãy nhập yêu cầu ở dưới.</div>
+      </div>
+      <!-- Hàng nhập + nút gửi cùng một hàng -->
+      <div class="chat-input-row">
+        <div class="chat-input-group">
+          <textarea v-model="directInput" class="chat-input" placeholder="Nhập yêu cầu (bot sẽ trả lời trong chat)"
+            rows="2"></textarea>
+          <button class="send-btn" @click="sendDirectInput" :disabled="loading || !directInput.trim()" aria-label="Gửi">
+            <Play class="send-icon" />
           </button>
         </div>
-
-        <!-- Direct Prompt Input -->
-        <div class="prompt-section">
-          <div class="prompt-header">
-            <label class="prompt-label">Gõ yêu cầu trực tiếp</label>
-            <div class="prompt-actions">
-              <button class="icon-btn add-btn" @click="sendDirectInput" :disabled="loading || !directInput.trim()">
-                <Play class="small-icon" />
-              </button>
-            </div>
-          </div>
-          <textarea 
-            v-model="directInput"
-            class="prompt-textarea"
-            placeholder="Nhập yêu cầu gửi lên AI"
-            rows="2"
-          ></textarea>
-        </div>
       </div>
-    </div>
-
-    <!-- Result -->
-    <div class="section">
-      <div class="section-header">
-        <FileText class="section-icon" />
-        <h2 class="section-title">{{ $t('result') }}</h2> 
+      <!-- 5 nút công cụ dưới ô nhập -->
+      <div class="tools-row">
+        <button v-for="item in actionList" :key="item" class="tool-btn" @click="performAction(item)"
+          :disabled="loading">
+          {{ $t(item) }}
+        </button>
       </div>
-      <textarea 
-        :value="displayResult"
-        class="result-textarea"
-        :placeholder="$t('result')"
-        rows="6"
-        readonly
-      ></textarea>
-    </div>
+      <!-- Tác vụ Word: lấy thông tin & áp dụng định dạng -->
 
-    <!-- Prompts - Collapsible -->
-    <div class="collapsible-section">
-      <div class="collapsible-header" @click="promptsExpanded = !promptsExpanded">
-        <div class="collapsible-title">
-          <MessageSquare class="collapsible-icon" />
-          {{ $t('prompts') }}
+      <!-- Hộp thoại tùy chọn định dạng Word -->
+      <el-dialog v-model="openFormatDialog" width="520px" title="Định dạng Word">
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <el-checkbox v-model="formatOptions.addHeader">Thêm tiêu ngữ</el-checkbox>
+          <el-checkbox v-model="formatOptions.a4Size">Thiết lập A4 + Times New Roman 14pt</el-checkbox>
+          <el-checkbox v-model="formatOptions.justifyMargins">Căn đều + thụt lề (2cm trái, 3cm phải, thụt đầu dòng
+            1cm)</el-checkbox>
+          <el-checkbox v-model="formatOptions.lineSpacing">Giãn dòng ~1.15, bỏ khoảng trước/sau</el-checkbox>
         </div>
-        <ChevronDown class="collapse-icon" :class="{ expanded: promptsExpanded }" />
-      </div>
-      <div class="collapsible-content" :class="{ expanded: promptsExpanded }">
-        <!-- System Prompt -->
-        <div class="prompt-section">
-          <div class="prompt-header">
-            <label class="prompt-label">{{ $t('homeSystem') }}</label>
-            <div class="prompt-actions">
-              <button class="icon-btn add-btn" @click="addSystemPromptVisible = true">
-                <Plus class="small-icon" />
-              </button>
-              <button class="icon-btn remove-btn" @click="removeSystemPromptVisible = true">
-                <Minus class="small-icon" />
-              </button>
-            </div>
-          </div>
-          <div class="select-wrapper">
-            <select v-model="systemPromptSelected" class="select-input" @change="(e) => handleSystemPromptChange((e.target as HTMLSelectElement)?.value ?? '')">
-              <option value="" disabled>{{ $t('homeSystemDescription') }}</option>
-              <option v-for="item in systemPromptList" :key="item.value" :value="item.value">
-                {{ item.key }}
-              </option>
-            </select>
-            <ChevronDown class="select-icon" />
-          </div>
-          <textarea 
-            v-model="systemPrompt"
-            class="prompt-textarea"
-            :placeholder="$t('homeSystemDescription')"
-            rows="2"
-            @blur="handleSystemPromptChange(systemPrompt)"
-          ></textarea>
-        </div>
-
-        <!-- User Prompt -->
-        <div class="prompt-section">
-          <div class="prompt-header">
-            <label class="prompt-label">{{ $t('homePrompt') }}</label>
-            <div class="prompt-actions">
-              <button class="icon-btn add-btn" @click="addPromptVisible = true">
-                <Plus class="small-icon" />
-              </button>
-              <button class="icon-btn remove-btn" @click="removePromptVisible = true">
-                <Minus class="small-icon" />
-              </button>
-            </div>
-          </div>
-          <div class="select-wrapper">
-            <select v-model="promptSelected" class="select-input" @change="(e) => handlePromptChange((e.target as HTMLSelectElement)?.value ?? '')">
-              <option value="" disabled>{{ $t('homePromptDescription') }}</option>
-              <option v-for="item in promptList" :key="item.value" :value="item.value">
-                {{ item.key }}
-              </option>
-            </select>
-            <ChevronDown class="select-icon" />
-          </div>
-          <textarea 
-            v-model="prompt"
-            class="prompt-textarea"
-            :placeholder="$t('homePromptDescription')"
-            rows="2"
-            @blur="handlePromptChange(prompt)"
-          ></textarea>
-        </div>
-      </div>
+        <template #footer>
+          <el-button @click="openFormatDialog = false">Đóng</el-button>
+          <el-button type="primary" @click="applyFormatOptions(); openFormatDialog = false">Áp dụng</el-button>
+        </template>
+      </el-dialog>
     </div>
 
     <!-- Dialogs -->
-    <HomePageAddDialog
-      v-model:addVisible="addSystemPromptVisible"
-      v-model:addAlias="addSystemPromptAlias"
-      v-model:addValue="addSystemPromptValue"
-      title="addSystemPrompt"
-      alias-label="addSystemPromptAlias"
-      alias-placeholder="addSystemPromptAliasDescription"
-      prompt-label="homeSystem"
-      prompt-placeholder="addSystemPromptDescription"
-      @add="addSystemPrompt"
-    />
-    <HomePageAddDialog
-      v-model:addVisible="addPromptVisible"
-      v-model:addAlias="addPromptAlias"
-      v-model:addValue="addPromptValue"
-      title="addPrompt"
-      alias-label="addPromptAlias"
-      alias-placeholder="addPromptAliasDescription"
-      prompt-label="homePrompt"
-      prompt-placeholder="homePromptDescription"
-      @add="addPrompt"
-    />
-    <HomePageDialog
-      v-model:removeVisible="removeSystemPromptVisible"
-      v-model:removeValue="removeSystemPromptValue"
-      title="removeSystemPrompt"
-      :option-list="systemPromptList"
-      @remove="removeSystemPrompt"
-    />
-    <HomePageDialog
-      v-model:removeVisible="removePromptVisible"
-      v-model:removeValue="removePromptValue"
-      title="removePrompt"
-      :option-list="promptList"
-      @remove="removePrompt"
-    />
 
     <!-- (Đã thay dialog bằng collapse ở trên) -->
   </div>
@@ -271,18 +144,13 @@
 <script lang="ts" setup>
 import { ElMessage } from 'element-plus'
 import {
-  Plus,
-  Minus,
   Settings,
-  Sparkles,
-  FileText,
   Play,
-  ArrowRight,
   Loader2,
-  ChevronDown,
   MessageSquare,
   Zap,
-  RefreshCw
+  ChevronDown,
+  Info
 } from 'lucide-vue-next'
 import { User } from 'lucide-vue-next'
 import { onBeforeMount, ref, watch, computed } from 'vue'
@@ -341,6 +209,34 @@ const removePromptValue = ref<any[]>([])
 // Direct prompt input
 const directInput = ref('')
 
+// Đếm số từ trong vùng văn bản đang bôi đen của Word
+const selectedWordCount = ref(0)
+async function updateSelectionCount() {
+  try {
+    await Word.run(async (ctx) => {
+      const sel = ctx.document.getSelection()
+      sel.load('text')
+      await ctx.sync()
+      const text = String(sel.text || '').trim()
+      selectedWordCount.value = text ? (text.split(/\s+/).filter(Boolean).length) : 0
+    })
+  } catch (e) {
+    // Không có vùng chọn hoặc Office.js chưa sẵn sàng
+    selectedWordCount.value = 0
+  }
+}
+function registerSelectionHandler() {
+  try {
+    // Cập nhật ngay khi vào, và đăng ký lắng nghe sự kiện thay đổi vùng chọn
+    updateSelectionCount()
+    Office.context.document.addHandlerAsync(Office.EventType.DocumentSelectionChanged, () => {
+      updateSelectionCount()
+    })
+  } catch (e) {
+    console.warn('Không thể đăng ký handler DocumentSelectionChanged:', e)
+  }
+}
+
 // result
 const result = ref('res')
 const displayResult = computed(() => {
@@ -350,6 +246,7 @@ const displayResult = computed(() => {
 })
 // word info
 const wordInfo = ref('')
+const wordInfoExpanded = ref(false)
 const loading = ref(false)
 const router = useRouter()
 const historyDialog = ref<any[]>([])
@@ -357,14 +254,7 @@ const historyDialog = ref<any[]>([])
 const jsonIssue = ref(false)
 const errorIssue = ref(false)
 
-// Format options collapsible state
-const formatOptionsExpanded = ref(false)
-const formatOptions = ref({
-  addHeader: true,
-  justifyMargins: true,
-  lineSpacing: true,
-  a4Size: true
-})
+// (Đã chuyển sang hộp thoại định dạng ở dưới)
 
 async function handleGetWordInfo(): Promise<void> {
   try {
@@ -383,6 +273,7 @@ async function handleGetWordInfo(): Promise<void> {
       .filter(Boolean)
       .join('\n')
     wordInfo.value = text
+    formatOptionsExpanded.value = true
   } catch (e) {
     console.error('Get Word info failed:', e)
     wordInfo.value = 'Không thể lấy thông tin Word: ' + String(e)
@@ -394,12 +285,16 @@ async function handleGetWordInfo(): Promise<void> {
 // insert type
 const insertType = ref<insertTypes>('replace')
 const useWordFormatting = ref(true)
-const insertTypeList = ['replace', 'append', 'newLine', 'NoAction'].map(
-  item => ({
-    label: t(item),
-    value: item
-  })
-)
+// Tuỳ chọn định dạng Word & hộp thoại
+const formatOptions = ref({
+  addHeader: false,
+  a4Size: true,
+  justifyMargins: true,
+  lineSpacing: true
+})
+const openFormatDialog = ref(false)
+// Format options collapsible state
+const formatOptionsExpanded = ref(false)
 
 // Dynamic model selection based on current API
 // Reactive options for Ollama models
@@ -418,67 +313,7 @@ const currentModelSelect = computed({
   }
 })
 
-async function getSystemPromptList() {
-  const table = promptDbInstance.table('systemPrompt')
-  const list = (await table.toArray()) as unknown as IStringKeyMap[]
-  systemPromptList.value = list
-}
 
-async function addSystemPrompt() {
-  const table = promptDbInstance.table('systemPrompt')
-  await table.put({
-    key: addSystemPromptAlias.value,
-    value: addSystemPromptValue.value
-  })
-  addSystemPromptVisible.value = false
-  getSystemPromptList()
-}
-
-async function removeSystemPrompt() {
-  removeSystemPromptVisible.value = false
-  const table = promptDbInstance.table('systemPrompt')
-  for (const value of removeSystemPromptValue.value) {
-    await table.delete(value)
-  }
-  removeSystemPromptValue.value = []
-  getSystemPromptList()
-}
-
-async function removePrompt() {
-  removePromptVisible.value = false
-  const table = promptDbInstance.table('userPrompt')
-  for (const value of removePromptValue.value) {
-    await table.delete(value)
-  }
-  removePromptValue.value = []
-  getPromptList()
-}
-
-function handleSystemPromptChange(val: string) {
-  systemPrompt.value = val
-  localStorage.setItem(localStorageKey.defaultSystemPrompt, val)
-}
-
-async function getPromptList() {
-  const table = promptDbInstance.table('userPrompt')
-  const list = (await table.toArray()) as unknown as IStringKeyMap[]
-  promptList.value = list
-}
-
-async function addPrompt() {
-  const table = promptDbInstance.table('userPrompt')
-  await table.put({
-    key: addPromptAlias.value,
-    value: addPromptValue.value
-  })
-  addPromptVisible.value = false
-  getPromptList()
-}
-
-function handlePromptChange(val: string) {
-  prompt.value = val
-  localStorage.setItem(localStorageKey.defaultPrompt, val)
-}
 
 const addWatch = () => {
   watch(
@@ -493,20 +328,12 @@ async function initData() {
   insertType.value =
     (localStorage.getItem(localStorageKey.insertType) as insertTypes) ||
     'replace'
-  useWordFormatting.value = 
+  useWordFormatting.value =
     localStorage.getItem(localStorageKey.useWordFormatting) === 'true'
   systemPrompt.value =
     localStorage.getItem(localStorageKey.defaultSystemPrompt) ||
     'Act like a personal assistant.'
-  await getSystemPromptList()
-  if (systemPromptList.value.find(item => item.value === systemPrompt.value)) {
-    systemPromptSelected.value = systemPrompt.value
-  }
   prompt.value = localStorage.getItem(localStorageKey.defaultPrompt) || ''
-  await getPromptList()
-  if (promptList.value.find(item => item.value === prompt.value)) {
-    promptSelected.value = prompt.value
-  }
 }
 
 function handleInsertTypeChange(val: insertTypes) {
@@ -696,7 +523,22 @@ async function continueChat() {
 // Send direct prompt to AI API
 async function sendDirectInput() {
   if (!checkApiKey()) return
-  const content = directInput.value.trim()
+  // Lấy nội dung gõ trực tiếp và ghép thêm văn bản đang được bôi đen (nếu có)
+  let content = directInput.value.trim()
+  try {
+    let selectedText = ''
+    await Word.run(async (ctx) => {
+      const sel = ctx.document.getSelection()
+      sel.load('text')
+      await ctx.sync()
+      selectedText = (sel.text || '')
+    })
+    if (selectedText && selectedText.trim().length > 0) {
+      content = `${content}\n\n${selectedText.trim()}`
+    }
+  } catch (err) {
+    console.warn('Không thể lấy vùng chọn từ Word:', err)
+  }
   if (!content) {
     ElMessage.warning('Vui lòng nhập yêu cầu')
     return
@@ -737,6 +579,8 @@ async function sendDirectInput() {
     API.common.insertResult(result, insertType)
   }
 }
+
+// (Hàm handleGetWordInfo phục vụ collapse đã khai báo phía trên)
 
 // Áp dụng định dạng theo tuỳ chọn hộp thoại
 async function applyFormatOptions() {
@@ -867,9 +711,8 @@ onBeforeMount(() => {
   addWatch()
   initData()
   loadOllamaModels()
+  registerSelectionHandler()
 })
 </script>
 
 <style scoped src="./HomePage.css"></style>
-
-
