@@ -530,6 +530,45 @@
   box-shadow: 0 0 0 2px rgba(3, 102, 214, 0.1);
 }
 
+/* Format collapse compact styles */
+.format-collapse .settings-grid {
+  padding: 8px 12px; /* đồng bộ với các section compact */
+  gap: 8px;
+}
+
+.format-collapse .setting-item {
+  gap: 8px; /* tăng nhẹ so với mặc định để thoáng */
+}
+
+.format-collapse .section-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.format-collapse :deep(.el-checkbox) {
+  line-height: 1.2;
+  margin: 2px 0;
+}
+
+.format-collapse :deep(.el-checkbox__label) {
+  font-size: 11px;
+  color: #24292e;
+}
+
+.format-collapse :deep(.el-checkbox__inner) {
+  width: 12px;
+  height: 12px;
+}
+
+.format-collapse :deep(.el-button) {
+  height: 28px; /* tương tự action-btn */
+  padding: 0 10px;
+  font-size: 11px;
+  border-radius: 4px;
+}
+
 /* Responsive adjustments */
 @media (max-width: 320px) {
   .homepage {
@@ -606,5 +645,8 @@
   .progress-section {
     background: #161b22;
     border-color: #30363d;
+  }
+  .format-collapse :deep(.el-checkbox__label) {
+    color: #e1e4e8;
   }
 }

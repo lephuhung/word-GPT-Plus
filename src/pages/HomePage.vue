@@ -40,12 +40,36 @@
       </button>
       <button 
         class="secondary-btn"
-        @click="formatDocument"
+        @click="formatOptionsExpanded = !formatOptionsExpanded"
         :disabled="loading"
       >
         <ArrowRight class="icon" />
-        Format văn bản
+        Định dạng văn bản
       </button>
+    </div>
+
+    <!-- Format Options - Collapsible -->
+    <div class="collapsible-section format-collapse">
+      <div class="collapsible-header" @click="formatOptionsExpanded = !formatOptionsExpanded">
+        <div class="collapsible-title">
+          <Settings class="collapsible-icon" />
+           <h2 class="section-title">Tùy chọn định dạng</h2>
+        </div>
+        <ChevronDown class="collapse-icon" :class="{ expanded: formatOptionsExpanded }" />
+      </div>
+      <div class="collapsible-content" :class="{ expanded: formatOptionsExpanded }">
+        <div class="settings-grid">
+          <div class="setting-item">
+            <el-checkbox v-model="formatOptions.addHeader">Thêm tiêu đề</el-checkbox>
+            <el-checkbox v-model="formatOptions.justifyMargins">Căn lề (Justify + thụt lề)</el-checkbox>
+            <el-checkbox v-model="formatOptions.lineSpacing">Giãn dòng (~1.15)</el-checkbox>
+            <el-checkbox v-model="formatOptions.a4Size">Thiết lập A4 (font Times New Roman 14pt)</el-checkbox>
+          </div>
+          <div class="section-actions">
+            <el-button type="primary" :disabled="loading" @click.stop="applyFormatOptions">Áp dụng</el-button>
+          </div>
+        </div>
+      </div>
     </div>
         <div class="section">
       <div class="section-header">
@@ -91,6 +115,24 @@
           >
             {{ $t(item) }}
           </button>
+        </div>
+
+        <!-- Direct Prompt Input -->
+        <div class="prompt-section">
+          <div class="prompt-header">
+            <label class="prompt-label">Gõ yêu cầu trực tiếp</label>
+            <div class="prompt-actions">
+              <button class="icon-btn add-btn" @click="sendDirectInput" :disabled="loading || !directInput.trim()">
+                <Play class="small-icon" />
+              </button>
+            </div>
+          </div>
+          <textarea 
+            v-model="directInput"
+            class="prompt-textarea"
+            placeholder="Nhập yêu cầu gửi lên AI"
+            rows="2"
+          ></textarea>
         </div>
       </div>
     </div>
@@ -221,6 +263,8 @@
       :option-list="promptList"
       @remove="removePrompt"
     />
+
+    <!-- (Đã thay dialog bằng collapse ở trên) -->
   </div>
 </template>
 
@@ -294,6 +338,9 @@ const addPromptValue = ref('')
 const removePromptVisible = ref(false)
 const removePromptValue = ref<any[]>([])
 
+// Direct prompt input
+const directInput = ref('')
+
 // result
 const result = ref('res')
 const displayResult = computed(() => {
@@ -309,6 +356,15 @@ const historyDialog = ref<any[]>([])
 
 const jsonIssue = ref(false)
 const errorIssue = ref(false)
+
+// Format options collapsible state
+const formatOptionsExpanded = ref(false)
+const formatOptions = ref({
+  addHeader: true,
+  justifyMargins: true,
+  lineSpacing: true,
+  a4Size: true
+})
 
 async function handleGetWordInfo(): Promise<void> {
   try {
@@ -637,137 +693,170 @@ async function continueChat() {
   }
 }
 
-// Format toàn bộ văn bản: áp dụng font và khoảng cách cho các đoạn, không xoá nội dung
-async function formatDocument(includeHeader = true) {
+// Send direct prompt to AI API
+async function sendDirectInput() {
+  if (!checkApiKey()) return
+  const content = directInput.value.trim()
+  if (!content) {
+    ElMessage.warning('Vui lòng nhập yêu cầu')
+    return
+  }
+  loading.value = true
   try {
-    loading.value = true;
+    historyDialog.value = [
+      {
+        role: 'user',
+        content
+      }
+    ]
+    await API.ollama.createChatCompletionStream({
+      ollamaEndpoint: settingForm.value.ollamaEndpoint,
+      ollamaModel:
+        settingForm.value.ollamaCustomModel ||
+        settingForm.value.ollamaModelSelect,
+      messages: historyDialog.value,
+      result,
+      historyDialog,
+      errorIssue,
+      loading,
+      temperature: settingForm.value.ollamaTemperature
+    })
+  } catch (error) {
+    result.value = String(error)
+    errorIssue.value = true
+    console.error(error)
+  }
+  if (errorIssue.value === true) {
+    errorIssue.value = false
+    ElMessage.error('Something is wrong')
+    return
+  }
+  if (useWordFormatting.value) {
+    API.common.insertFormattedResult(result, insertType)
+  } else {
+    API.common.insertResult(result, insertType)
+  }
+}
+
+// Áp dụng định dạng theo tuỳ chọn hộp thoại
+async function applyFormatOptions() {
+  try {
+    loading.value = true
     await Word.run(async (context) => {
-      const body = context.document.body;
-      const cmToPoints = (cm: number) => Math.round(cm * 28.346);
+      const body = context.document.body
+      const cmToPoints = (cm: number) => Math.round(cm * 28.346)
 
-      // (Bỏ qua) Thiết lập khổ giấy/margin: Word JS API không hỗ trợ trực tiếp
-
-      // 2️⃣ Thêm tiêu ngữ
-      if (includeHeader) {
+      // Tuỳ chọn: Thêm tiêu đề
+      if (formatOptions.value.addHeader) {
         const table = body.insertTable(2, 2, Word.InsertLocation.start, [
           [
-            "UBND TỈNH HÀ TĨNH\nSỞ VĂN HÓA, THỂ THAO VÀ DU LỊCH",
-            "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM\nĐộc lập - Tự do - Hạnh phúc",
+            'UBND TỈNH HÀ TĨNH\nSỞ VĂN HÓA, THỂ THAO VÀ DU LỊCH',
+            'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM\nĐộc lập - Tự do - Hạnh phúc',
           ],
           [
-            "Số: 2044 / SVHTTDL-VP\nVề việc hướng dẫn thực hiện công tác phổ biến, giáo dục pháp luật quý III năm 2025",
-            "Hà Tĩnh, ngày  tháng  năm 20",
+            'Số: 2044 / SVHTTDL-VP\nVề việc hướng dẫn thực hiện công tác phổ biến, giáo dục pháp luật quý III năm 2025',
+            'Hà Tĩnh, ngày  tháng  năm 20',
           ],
-        ]);
+        ])
+        table.alignment = 'Centered'
+        const rows = table.rows
+        rows.load('items')
+        await context.sync()
+        const [row1, row2] = rows.items
+        row1.cells.load('items')
+        row2.cells.load('items')
+        await context.sync()
+        const [left1, right1] = row1.cells.items
+        const [left2, right2] = row2.cells.items
 
-        table.alignment = "Centered";
+        left1.body.paragraphs.load('items')
+        right1.body.paragraphs.load('items')
+        left2.body.paragraphs.load('items')
+        right2.body.paragraphs.load('items')
+        await context.sync()
 
-        const rows = table.rows;
-        rows.load("items");
-        await context.sync();
-
-        // Hàng 1
-        const [row1, row2] = rows.items;
-
-        // Phải load cells trước khi truy cập items
-        row1.cells.load("items");
-        row2.cells.load("items");
-        await context.sync();
-
-        const [left1, right1] = row1.cells.items;
-        const [left2, right2] = row2.cells.items;
-
-        // Căn giữa và format hàng đầu tiên
-        left1.body.paragraphs.load("items");
-        await context.sync();
         for (const p of left1.body.paragraphs.items) {
-          p.font.name = "Times New Roman";
-          p.font.size = 14;
-          p.font.bold = true;
-          p.alignment = "Centered";
+          p.font.name = 'Times New Roman'
+          p.font.size = 14
+          p.font.bold = true
+          p.alignment = 'Centered'
         }
-
-        right1.body.paragraphs.load("items");
-        await context.sync();
         for (const p of right1.body.paragraphs.items) {
-          p.font.name = "Times New Roman";
-          p.font.size = 14;
-          p.font.bold = true;
-          p.alignment = "Centered";
+          p.font.name = 'Times New Roman'
+          p.font.size = 14
+          p.font.bold = true
+          p.alignment = 'Centered'
         }
-
-        // Gạch chân dòng thứ hai trong cột phải (Độc lập...)
-        const parasRight1 = right1.body.paragraphs;
-        parasRight1.load("items");
-        await context.sync();
+        const parasRight1 = right1.body.paragraphs
+        parasRight1.load('items')
+        await context.sync()
         if (parasRight1.items.length > 1) {
-          parasRight1.items[1].font.underline = "Single";
+          parasRight1.items[1].font.underline = 'Single'
         }
-
-        // Hàng 2: số văn bản và ngày tháng
-        left2.body.paragraphs.load("items");
-        await context.sync();
         for (const p of left2.body.paragraphs.items) {
-          p.font.name = "Times New Roman";
-          p.font.size = 14;
-          p.alignment = "Left";
+          p.font.name = 'Times New Roman'
+          p.font.size = 14
+          p.alignment = 'Left'
         }
-
-        const parasLeft2 = left2.body.paragraphs;
-        parasLeft2.load("items");
-        await context.sync();
+        const parasLeft2 = left2.body.paragraphs
+        parasLeft2.load('items')
+        await context.sync()
         if (parasLeft2.items.length > 0) {
-          parasLeft2.items[0].font.bold = true; // "Số: ..."
+          parasLeft2.items[0].font.bold = true
         }
         if (parasLeft2.items.length > 1) {
-          parasLeft2.items[1].font.italic = true; // "Về việc ..."
+          parasLeft2.items[1].font.italic = true
         }
-
-        right2.body.paragraphs.load("items");
-        await context.sync();
         for (const p of right2.body.paragraphs.items) {
-          p.font.name = "Times New Roman";
-          p.font.size = 14;
-          p.font.italic = true;
-          p.alignment = "Centered";
+          p.font.name = 'Times New Roman'
+          p.font.size = 14
+          p.font.italic = true
+          p.alignment = 'Centered'
         }
       }
 
-      // 3️⃣ Định dạng toàn văn bản
-      const whole = body.getRange();
-      whole.font.name = "Times New Roman";
-      whole.font.size = 14;
+      // Bỏ qua thiết lập khổ giấy A4 trực tiếp: Office.js không hỗ trợ
+      // Tuỳ chọn: Thiết lập A4 (áp dụng font mặc định Times New Roman 14pt)
+      if (formatOptions.value.a4Size) {
+        const whole = body.getRange()
+        whole.font.name = 'Times New Roman'
+        whole.font.size = 14
+      }
 
-      const paragraphs = body.paragraphs;
-      paragraphs.load("items");
-      await context.sync();
-
-      const parentTables = paragraphs.items.map((p) => (p as any).parentTableOrNullObject);
-      await context.sync();
+      // Tuỳ chọn: Căn lề & thụt lề, Tuỳ chọn: Giãn dòng
+      const paragraphs = body.paragraphs
+      paragraphs.load('items')
+      await context.sync()
+      const parentTables = paragraphs.items.map((p) => (p as any).parentTableOrNullObject)
+      await context.sync()
 
       for (let i = 0; i < paragraphs.items.length; i++) {
-        const p = paragraphs.items[i];
-        const parentTable = parentTables[i];
-        if (parentTable && !parentTable.isNullObject) continue; // bỏ qua tiêu ngữ
-        p.alignment = "Justified";
-        p.leftIndent = cmToPoints(2);
-        p.rightIndent = cmToPoints(3);
-        p.firstLineIndent = cmToPoints(1);
-        // Word JS không hỗ trợ đặt hệ số dòng trực tiếp; dùng điểm tương đương ~1.15
-        p.lineSpacing = 13.8;
-        p.spaceBefore = 0;
-        p.spaceAfter = 0;
+        const p = paragraphs.items[i]
+        const parentTable = parentTables[i]
+        if (parentTable && !parentTable.isNullObject) continue // bỏ qua tiêu ngữ
+
+        if (formatOptions.value.justifyMargins) {
+          p.alignment = 'Justified'
+          p.leftIndent = cmToPoints(2)
+          p.rightIndent = cmToPoints(3)
+          p.firstLineIndent = cmToPoints(1)
+        }
+        if (formatOptions.value.lineSpacing) {
+          p.lineSpacing = 13.8 // ~1.15 cho 14pt
+          p.spaceBefore = 0
+          p.spaceAfter = 0
+        }
       }
 
-      await context.sync();
-    });
+      await context.sync()
+    })
 
-    ElMessage.success("Định dạng văn bản + tiêu ngữ hoàn tất!");
+    ElMessage.success('Áp dụng định dạng theo tuỳ chọn thành công!')
   } catch (e) {
-    console.error("Format document failed:", e);
-    ElMessage.error("Định dạng văn bản thất bại: " + String(e));
+    console.error('Apply format options failed:', e)
+    ElMessage.error('Áp dụng định dạng thất bại: ' + String(e))
   } finally {
-    loading.value = false;
+    loading.value = false
   }
 }
 
