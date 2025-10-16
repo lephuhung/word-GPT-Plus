@@ -50,11 +50,17 @@
     <div class="section chat-section">
      
       <div class="chat-window">
-        <div v-for="(msg, idx) in historyDialog" :key="idx"
+      <template v-for="(msg, idx) in historyDialog">
+        <div
           :class="['chat-msg', msg.role === 'assistant' ? 'assistant' : 'user', msg.notice ? 'notice' : '']">
           <div class="chat-meta">{{ msg.meta || (msg.role === 'assistant' ? 'Word GPT' : 'Bạn') }}</div>
           <pre class="chat-content">{{ msg.content }}</pre>
         </div>
+        <div v-if="msg.role === 'assistant' && !msg.notice" class="chat-actions external">
+          <button class="chat-action-btn replace-btn" @click="insertFromMessage(idx, 'replace')" :disabled="loading">{{ $t('replace') }}</button>
+          <button class="chat-action-btn append-btn" @click="insertFromMessage(idx, 'append')" :disabled="loading">{{ $t('append') }}</button>
+        </div>
+      </template>
         <div v-if="historyDialog.length === 0" class="chat-empty">Chưa có tin nhắn. Hãy nhập yêu cầu ở dưới.</div>
       </div>
       <!-- Composer tối giản: chỉ còn ô nhập -->
@@ -441,13 +447,7 @@ async function template(taskType: keyof typeof buildInPrompt | 'custom') {
     ElMessage.error('Something is wrong')
     return
   }
-  if (!jsonIssue.value) {
-    if (useWordFormatting.value) {
-      API.common.insertFormattedResult(result, insertType)
-    } else {
-      API.common.insertResult(result, insertType)
-    }
-  }
+  
 }
 
 function checkApiKey() {
@@ -515,11 +515,7 @@ async function continueChat() {
     ElMessage.error('Something is wrong')
     return
   }
-  if (useWordFormatting.value) {
-    API.common.insertFormattedResult(result, insertType)
-  } else {
-    API.common.insertResult(result, insertType)
-  }
+  
 }
 
 // Send direct prompt to AI API
@@ -585,10 +581,33 @@ async function sendDirectInput() {
     ElMessage.error('Something is wrong')
     return
   }
-  if (useWordFormatting.value) {
-    API.common.insertFormattedResult(result, insertType)
-  } else {
-    API.common.insertResult(result, insertType)
+  
+}
+
+// Manual insert from a specific assistant message
+function insertFromMessage(index: number, type: insertTypes) {
+  try {
+    const msg = historyDialog.value[index]
+    if (!msg || msg.role !== 'assistant') {
+      ElMessage.warning('Chỉ chèn nội dung từ trả lời của Bot')
+      return
+    }
+    const text = String(msg.content || '').trim()
+    if (!text) {
+      ElMessage.warning('Nội dung trống')
+      return
+    }
+    const tempResult = ref(text)
+    const tempInsertType = ref<insertTypes>(type)
+    if (useWordFormatting.value) {
+      API.common.insertFormattedResult(tempResult, tempInsertType)
+    } else {
+      API.common.insertResult(tempResult, tempInsertType)
+    }
+  } catch (e) {
+    errorIssue.value = true
+    ElMessage.error('Không thể chèn nội dung')
+    console.error(e)
   }
 }
 
