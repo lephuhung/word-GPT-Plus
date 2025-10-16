@@ -113,20 +113,20 @@ export const buildInPrompt = {
     
     Provide only the improved version without explanations and any additional information: ${text}`
   },
-  academic: {
-    system: (language: string) =>
-      `You are an expert academic editor specializing in scholarly publications. Respond in ${language}.`,
-    user: (
-      text: string,
-      language: string
-    ) => `Transform the following text into academic-quality writing suitable for a high-impact scientific journal:
-    - Elevate vocabulary and phrasing while preserving meaning
-    - Apply formal academic tone consistent with scholarly publications
-    - Structure sentences and paragraphs for logical flow
-    - Use precise terminology appropriate for scientific literature
+  // academic: {
+  //   system: (language: string) =>
+  //     `You are an expert academic editor specializing in scholarly publications. Respond in ${language}.`,
+  //   user: (
+  //     text: string,
+  //     language: string
+  //   ) => `Transform the following text into academic-quality writing suitable for a high-impact scientific journal:
+  //   - Elevate vocabulary and phrasing while preserving meaning
+  //   - Apply formal academic tone consistent with scholarly publications
+  //   - Structure sentences and paragraphs for logical flow
+  //   - Use precise terminology appropriate for scientific literature
 
-    Provide only the revised text without explanations and Reply in ${language}: ${text}`
-  },
+  //   Provide only the revised text without explanations and Reply in ${language}: ${text}`
+  // },
   summary: {
     system: (language: string) =>
       `You are a professional text summarization expert. Respond in ${language}.`,

@@ -16,17 +16,7 @@
         </button>
       </div>
     </div>
-    <!-- Main Actions -->
-    <div class="main-actions">
-      <button class="primary-btn" @click="handleGetWordInfo" :disabled="loading">
-        <FileText class="icon" />
-        Lấy thông tin Word
-      </button>
-      <button class="secondary-btn" @click="formatOptionsExpanded = !formatOptionsExpanded" :disabled="loading">
-        <ArrowRight class="icon" />
-        Định dạng văn bản
-      </button>
-    </div>
+    <!-- Main Actions removed per request -->
     <!-- Word Info -->
     <!-- <div class="collapsible-section">
       <div class="collapsible-header" @click="wordInfoExpanded = !wordInfoExpanded">
@@ -67,14 +57,7 @@
         </div>
       </div>
     </div>
-    <div class="section">
-      <div class="section-header">
-        <FileText class="section-icon" />
-        <h2 class="section-title">Thông tin Word</h2>
-      </div>
-      <textarea v-if="wordInfo" :value="wordInfo" class="result-textarea" placeholder="Thông tin Word" rows="8"
-        readonly></textarea>
-    </div>
+    <!-- Word Info section removed per request -->
 
     <!-- Progress Indicator -->
     <div v-if="loading" class="progress-section">
@@ -87,52 +70,36 @@
 
     <!-- Khung chat toàn trang -->
     <div class="section chat-section">
-      <div class="section-header">
-        <MessageSquare class="section-icon" />
-        <h2 class="section-title">Cuộc trò chuyện</h2>
-        <span class="selection-count" v-if="selectedWordCount > 0">Đã bôi đen: {{ selectedWordCount }} từ</span>
-      </div>
+     
       <div class="chat-window">
         <div v-for="(msg, idx) in historyDialog" :key="idx"
-          :class="['chat-msg', msg.role === 'assistant' ? 'assistant' : 'user']">
-          <div class="chat-meta">{{ msg.role === 'assistant' ? 'Bot' : 'Bạn' }}</div>
+          :class="['chat-msg', msg.role === 'assistant' ? 'assistant' : 'user', msg.notice ? 'notice' : '']">
+          <div class="chat-meta">{{ msg.meta || (msg.role === 'assistant' ? 'Bot' : 'Bạn') }}</div>
           <pre class="chat-content">{{ msg.content }}</pre>
         </div>
         <div v-if="historyDialog.length === 0" class="chat-empty">Chưa có tin nhắn. Hãy nhập yêu cầu ở dưới.</div>
       </div>
-      <!-- Hàng nhập + nút gửi cùng một hàng -->
-      <div class="chat-input-row">
-        <div class="chat-input-group">
-          <textarea v-model="directInput" class="chat-input" placeholder="Nhập yêu cầu (bot sẽ trả lời trong chat)"
-            rows="2"></textarea>
-          <button class="send-btn" @click="sendDirectInput" :disabled="loading || !directInput.trim()" aria-label="Gửi">
-            <Play class="send-icon" />
-          </button>
-        </div>
+      <!-- Composer tối giản: chỉ còn ô nhập -->
+      <div class="composer">
+        <input
+          v-model="directInput"
+          class="composer-input"
+          placeholder="Message Copilot or @ mention a tab"
+          @keydown.enter.prevent="sendDirectInput"
+        />
       </div>
-      <!-- 5 nút công cụ dưới ô nhập -->
-      <div class="tools-row">
-        <button v-for="item in actionList" :key="item" class="tool-btn" @click="performAction(item)"
-          :disabled="loading">
-          {{ $t(item) }}
-        </button>
+      <!-- Hiển thị số từ đã chọn khi người dùng bôi đen -->
+      <!-- <div class="selection-count" v-if="selectedWordCount > 0">Đã chọn: {{ selectedWordCount }} từ</div> -->
+      <!-- Hàng nút nhanh cho AI tools (4 nút nhỏ) -->
+      <div class="quick-tools-row">
+        <button class="quick-tool-btn btn-translate" @click="performAction('translate')" :disabled="loading">{{ $t('translate') }}</button>
+        <button class="quick-tool-btn btn-summary" @click="performAction('summary')" :disabled="loading">{{ $t('summary') }}</button>
+        <button class="quick-tool-btn btn-polish" @click="performAction('polish')" :disabled="loading">{{ $t('polish') }}</button>
+        <button class="quick-tool-btn btn-grammar" @click="performAction('grammar')" :disabled="loading">{{ $t('grammar') }}</button>
+        <button class="quick-tool-btn full-width btn-format" @click="formatOptionsExpanded = !formatOptionsExpanded" :disabled="loading">Định dạng văn bản</button>
       </div>
-      <!-- Tác vụ Word: lấy thông tin & áp dụng định dạng -->
 
-      <!-- Hộp thoại tùy chọn định dạng Word -->
-      <el-dialog v-model="openFormatDialog" width="520px" title="Định dạng Word">
-        <div style="display:flex; flex-direction:column; gap:8px;">
-          <el-checkbox v-model="formatOptions.addHeader">Thêm tiêu ngữ</el-checkbox>
-          <el-checkbox v-model="formatOptions.a4Size">Thiết lập A4 + Times New Roman 14pt</el-checkbox>
-          <el-checkbox v-model="formatOptions.justifyMargins">Căn đều + thụt lề (2cm trái, 3cm phải, thụt đầu dòng
-            1cm)</el-checkbox>
-          <el-checkbox v-model="formatOptions.lineSpacing">Giãn dòng ~1.15, bỏ khoảng trước/sau</el-checkbox>
-        </div>
-        <template #footer>
-          <el-button @click="openFormatDialog = false">Đóng</el-button>
-          <el-button type="primary" @click="applyFormatOptions(); openFormatDialog = false">Áp dụng</el-button>
-        </template>
-      </el-dialog>
+      <!-- Ẩn phần hiển thị kết quả AI theo yêu cầu -->
     </div>
 
     <!-- Dialogs -->
@@ -143,22 +110,14 @@
 
 <script lang="ts" setup>
 import { ElMessage } from 'element-plus'
-import {
-  Settings,
-  Play,
-  Loader2,
-  MessageSquare,
-  Zap,
-  ChevronDown,
-  Info
-} from 'lucide-vue-next'
+import { Settings, Loader2, Zap, ChevronDown } from 'lucide-vue-next'
 import { User } from 'lucide-vue-next'
 import { onBeforeMount, ref, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
 import API from '@/api'
-import { getWordDocumentInfo, formatWordInfoVi } from '@/utils/wordInfo'
+// Word info feature removed per request
 
 import { buildInPrompt } from '@/utils/constant'
 import { promptDbInstance } from '@/store/promtStore'
@@ -208,6 +167,8 @@ const removePromptValue = ref<any[]>([])
 
 // Direct prompt input
 const directInput = ref('')
+// Composer states (đã bỏ nút + và micro)
+// Bỏ Quick response theo yêu cầu
 
 // Đếm số từ trong vùng văn bản đang bôi đen của Word
 const selectedWordCount = ref(0)
@@ -237,6 +198,42 @@ function registerSelectionHandler() {
   }
 }
 
+// Cập nhật/loại bỏ thông báo nhỏ trong khung chat khi người dùng bôi đen văn bản
+function updateSelectionNotice(newCount?: number) {
+  const count = typeof newCount === 'number' ? newCount : selectedWordCount.value
+  if (count > 0) {
+    const message: any = {
+      role: 'assistant',
+      content: `Đã chọn: ${count} từ`,
+      meta: 'Người dùng',
+      notice: true
+    }
+    if (selectionNoticeIndex.value !== null && historyDialog.value[selectionNoticeIndex.value!]) {
+      historyDialog.value[selectionNoticeIndex.value!] = message
+    } else {
+      historyDialog.value.push(message)
+      selectionNoticeIndex.value = historyDialog.value.length - 1
+    }
+  } else {
+    if (selectionNoticeIndex.value !== null) {
+      historyDialog.value.splice(selectionNoticeIndex.value!, 1)
+      selectionNoticeIndex.value = null
+    }
+  }
+}
+
+// Theo dõi thay đổi selectedWordCount để cập nhật thông báo nhỏ
+watch(selectedWordCount, (n) => {
+  updateSelectionNotice(n)
+})
+
+// Xây dựng danh sách messages gửi cho model (bỏ qua các notice)
+function buildMessagesForModel() {
+  return historyDialog.value
+    .filter((m: any) => !m.notice)
+    .map((m: any) => ({ role: m.role, content: m.content }))
+}
+
 // result
 const result = ref('res')
 const displayResult = computed(() => {
@@ -244,43 +241,20 @@ const displayResult = computed(() => {
   if (text.length <= 200) return text
   return text.slice(0, 200) + '...'
 })
-// word info
-const wordInfo = ref('')
-const wordInfoExpanded = ref(false)
+// Word info removed
 const loading = ref(false)
 const router = useRouter()
 const historyDialog = ref<any[]>([])
+// Vị trí thông báo nhỏ (notice) trong mảng historyDialog
+const selectionNoticeIndex = ref<number | null>(null)
 
 const jsonIssue = ref(false)
 const errorIssue = ref(false)
 
-// (Đã chuyển sang hộp thoại định dạng ở dưới)
+// Lưu system prompt gần nhất để gửi kèm khi gọi API (không hiển thị lên UI)
+const lastSystemPrompt = ref<string>('')
 
-async function handleGetWordInfo(): Promise<void> {
-  try {
-    loading.value = true
-    // Xoá nội dung cũ để ẩn textbox cho đến khi có kết quả mới
-    wordInfo.value = ''
-    const info = await getWordDocumentInfo()
-    const raw = formatWordInfoVi(info)
-    const text = raw
-      .split('\n')
-      .map(line => {
-        const l = line.trim()
-        if (!l) return ''
-        return /^[\-•\*]/.test(l) ? l : '- ' + l
-      })
-      .filter(Boolean)
-      .join('\n')
-    wordInfo.value = text
-    formatOptionsExpanded.value = true
-  } catch (e) {
-    console.error('Get Word info failed:', e)
-    wordInfo.value = 'Không thể lấy thông tin Word: ' + String(e)
-  } finally {
-    loading.value = false
-  }
-}
+// handleGetWordInfo removed
 
 // insert type
 const insertType = ref<insertTypes>('replace')
@@ -292,7 +266,7 @@ const formatOptions = ref({
   justifyMargins: true,
   lineSpacing: true
 })
-const openFormatDialog = ref(false)
+// openFormatDialog removed (using collapsible options)
 // Format options collapsible state
 const formatOptionsExpanded = ref(false)
 
@@ -415,18 +389,34 @@ async function template(taskType: keyof typeof buildInPrompt | 'custom') {
     )
   }
   if (settingForm.value.ollamaEndpoint) {
-    historyDialog.value = [
-      {
-        role: 'user',
-        content: systemMessage + '\n' + userMessage
-      }
+    // Ghi nhớ system prompt cho các lần gọi tiếp theo
+    lastSystemPrompt.value = systemMessage
+
+    // Chỉ hiển thị userMessage lên UI để tránh lộ system prompt
+    const userPayload = {
+      role: 'user',
+      content: userMessage
+    }
+    historyDialog.value = [userPayload]
+    // Thêm thông báo đã nhận bao nhiêu từ (nếu có vùng chọn)
+    const countSelected = String(selectedText || '').trim()
+      ? String(selectedText).trim().split(/\s+/).filter(Boolean).length
+      : 0
+    if (countSelected > 0) {
+      historyDialog.value.push({ role: 'assistant', content: `Đã nhận: ${countSelected} từ`, meta: 'Thông báo', notice: true })
+    }
+    // Xây dựng payload gửi tới model: chèn system prompt ở đầu, sau đó là lịch sử chat (đã lọc notice)
+    const messagesForModel = [
+      { role: 'system', content: lastSystemPrompt.value },
+      ...buildMessagesForModel()
     ]
+
     await API.ollama.createChatCompletionStream({
       ollamaEndpoint: settingForm.value.ollamaEndpoint,
       ollamaModel:
         settingForm.value.ollamaCustomModel ||
         settingForm.value.ollamaModelSelect,
-      messages: historyDialog.value,
+      messages: messagesForModel,
       result,
       historyDialog,
       errorIssue,
@@ -463,8 +453,6 @@ function checkApiKey() {
   return true
 }
 
-const actionList = Object.keys(buildInPrompt) as (keyof typeof buildInPrompt)[]
-
 async function performAction(action: keyof typeof buildInPrompt) {
   if (!checkApiKey()) return
   template(action)
@@ -491,12 +479,17 @@ async function continueChat() {
       role: 'user',
       content: 'continue'
     })
+    // Nếu có system prompt trước đó, thêm vào đầu payload gửi model
+    const messagesForModel = lastSystemPrompt.value
+      ? [{ role: 'system', content: lastSystemPrompt.value }, ...buildMessagesForModel()]
+      : buildMessagesForModel()
+
     await API.ollama.createChatCompletionStream({
       ollamaEndpoint: settingForm.value.ollamaEndpoint,
       ollamaModel:
         settingForm.value.ollamaCustomModel ||
         settingForm.value.ollamaModelSelect,
-      messages: historyDialog.value,
+      messages: messagesForModel,
       result,
       historyDialog,
       errorIssue,
@@ -551,12 +544,19 @@ async function sendDirectInput() {
         content
       }
     ]
+    // Thêm thông báo đã nhận bao nhiêu từ (chỉ tính phần văn bản bôi đen)
+    const countSelectedOnly = selectedText && selectedText.trim().length > 0
+      ? selectedText.trim().split(/\s+/).filter(Boolean).length
+      : 0
+    if (countSelectedOnly > 0) {
+      historyDialog.value.push({ role: 'assistant', content: `Đã nhận: ${countSelectedOnly} từ`, meta: 'Thông báo', notice: true })
+    }
     await API.ollama.createChatCompletionStream({
       ollamaEndpoint: settingForm.value.ollamaEndpoint,
       ollamaModel:
         settingForm.value.ollamaCustomModel ||
         settingForm.value.ollamaModelSelect,
-      messages: historyDialog.value,
+      messages: buildMessagesForModel(),
       result,
       historyDialog,
       errorIssue,
@@ -579,6 +579,21 @@ async function sendDirectInput() {
     API.common.insertResult(result, insertType)
   }
 }
+
+// Quick response removed per request
+
+// Suggestions under greeting
+function handleQuickSuggest(type: 'summary' | 'expand') {
+  if (type === 'summary') {
+    directInput.value = 'Create a summary of this page.'
+  } else {
+    directInput.value = 'Expand on this topic.'
+  }
+  sendDirectInput()
+}
+
+// Placeholder for voice input
+// Bỏ tính năng voice input theo yêu cầu
 
 // (Hàm handleGetWordInfo phục vụ collapse đã khai báo phía trên)
 
