@@ -3,6 +3,14 @@
   box-sizing: border-box;
 }
 
+/* Fit to viewport and remove page scrollbar (works with <style scoped>) */
+:global(html), :global(body) {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
 .homepage {
   --page-max-width: 100%;
   width: 100%;
@@ -14,6 +22,7 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   color: #2c3e50;
   font-size: 14px;
   line-height: 1.5;
@@ -163,17 +172,25 @@
   font-weight: 500;
 }
 
+/* Ensure the meta label is readable on user (blue) bubble */
+.chat-msg.user .chat-meta {
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.12);
+}
+
 .chat-content {
   margin: 0;
   white-space: pre-wrap;
   font-family: inherit;
   font-size: 14px;
   line-height: 1.5;
+  text-align: justify;
+  text-justify: inter-word;
 }
 
 /* Simple Composer */
 .composer {
-  padding: 16px 20px;
+  padding: 10px 16px;
   background: white;
   border-top: 1px solid #e9ecef;
   flex-shrink: 0;
@@ -181,10 +198,10 @@
 
 .composer-input {
   width: 100%;
-  padding: 12px 16px;
+  padding: 8px 12px;
   border: 1px solid #dee2e6;
-  border-radius: 24px;
-  font-size: 14px;
+  border-radius: 18px;
+  font-size: 13px;
   outline: none;
   transition: border-color 0.2s ease;
   background: #f8f9fa;
@@ -374,7 +391,7 @@
   }
   
   .composer {
-    padding: 20px 30px;
+    padding: 12px 20px;
   }
   
   .quick-tools-row {
@@ -386,6 +403,92 @@
   .homepage {
     --page-max-width: 1000px;
   }
+}
+
+/* Format dialog: responsive width & internal scroll */
+:global(.format-dialog) {
+  /* Match chat theme */
+  --el-color-primary: #007bff; /* primary button color in dialog */
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  max-width: 720px; /* allow wider content to avoid wrapping */
+  /* Prevent stray list markers inside dialog */
+  list-style: none;
+}
+
+:global(.format-dialog .el-dialog__body) {
+  max-height: 70vh; /* keep dialog visible on small screens */
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px;
+  text-align: left; /* ensure left-aligned content inside dialog */
+}
+
+:global(.format-dialog .el-dialog__header) {
+  padding: 12px 16px;
+  margin-right: 0; /* remove default right margin of Element Plus */
+  border-bottom: 1px solid #f1f3f4;
+}
+
+:global(.format-dialog .el-dialog__title) {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+:global(.format-dialog .el-dialog__footer) {
+  padding: 12px 16px;
+  border-top: 1px solid #f1f3f4;
+}
+
+/* Make options compact and readable */
+:global(.format-dialog .el-checkbox) {
+  display: flex;
+  align-items: center; /* center vertically for single-line labels */
+  padding: 6px 0;
+  width: 100%; /* take full row width */
+}
+
+:global(.format-dialog .el-checkbox__label) {
+  color: #2c3e50;
+  line-height: 1.5;
+  white-space: nowrap; /* keep on one line on wider screens */
+  text-align: left; /* multi-line labels align left */
+  flex: 1; /* allow label to use remaining space */
+  min-width: 0; /* enable flex child to shrink properly */
+}
+
+/* On very small screens, allow wrapping for readability */
+@media (max-width: 420px) {
+  :global(.format-dialog .el-checkbox__label) {
+    white-space: normal;
+  }
+}
+
+/* Tweak checkbox visuals to match chat accent */
+:global(.format-dialog .el-checkbox__inner) {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
+
+:global(.format-dialog .el-checkbox__input.is-checked .el-checkbox__inner),
+:global(.format-dialog .el-checkbox__input.is-focus .el-checkbox__inner) {
+  background-color: #007bff;
+  border-color: #007bff;
+}
+
+/* Primary button matches chat accent */
+:global(.format-dialog .el-button--primary) {
+  background-color: #007bff;
+  border-color: #007bff;
+}
+
+:global(.format-dialog .el-button--primary:hover) {
+  background-color: #0069d9;
+  border-color: #0069d9;
 }
 
 /* Hide unused elements for clean chatbot experience */

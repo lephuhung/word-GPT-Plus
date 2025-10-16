@@ -34,29 +34,7 @@
         </div>
       </div>
     </div> -->
-    <!-- Format Options - Collapsible -->
-    <div class="collapsible-section format-collapse">
-      <div class="collapsible-header" @click="formatOptionsExpanded = !formatOptionsExpanded">
-        <div class="collapsible-title">
-          <Settings class="collapsible-icon" />
-          <h2 class="section-title">Tùy chọn định dạng</h2>
-        </div>
-        <ChevronDown class="collapse-icon" :class="{ expanded: formatOptionsExpanded }" />
-      </div>
-      <div class="collapsible-content" :class="{ expanded: formatOptionsExpanded }">
-        <div class="settings-grid">
-          <div class="setting-item">
-            <el-checkbox v-model="formatOptions.addHeader">Thêm tiêu đề</el-checkbox>
-            <el-checkbox v-model="formatOptions.justifyMargins">Căn lề (Justify + thụt lề)</el-checkbox>
-            <el-checkbox v-model="formatOptions.lineSpacing">Giãn dòng (~1.15)</el-checkbox>
-            <el-checkbox v-model="formatOptions.a4Size">Thiết lập A4 (font Times New Roman 14pt)</el-checkbox>
-          </div>
-          <div class="section-actions">
-            <el-button type="primary" :disabled="loading" @click.stop="applyFormatOptions">Áp dụng</el-button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <!-- Tùy chọn định dạng: chuyển sang Popup -->
     <!-- Word Info section removed per request -->
 
     <!-- Progress Indicator -->
@@ -74,7 +52,7 @@
       <div class="chat-window">
         <div v-for="(msg, idx) in historyDialog" :key="idx"
           :class="['chat-msg', msg.role === 'assistant' ? 'assistant' : 'user', msg.notice ? 'notice' : '']">
-          <div class="chat-meta">{{ msg.meta || (msg.role === 'assistant' ? 'Bot' : 'Bạn') }}</div>
+          <div class="chat-meta">{{ msg.meta || (msg.role === 'assistant' ? 'Word GPT' : 'Bạn') }}</div>
           <pre class="chat-content">{{ msg.content }}</pre>
         </div>
         <div v-if="historyDialog.length === 0" class="chat-empty">Chưa có tin nhắn. Hãy nhập yêu cầu ở dưới.</div>
@@ -84,7 +62,7 @@
         <input
           v-model="directInput"
           class="composer-input"
-          placeholder="Message Copilot or @ mention a tab"
+          placeholder="Nhập yêu cầu (bot sẽ trả lời trong chat)"
           @keydown.enter.prevent="sendDirectInput"
         />
       </div>
@@ -96,15 +74,25 @@
         <button class="quick-tool-btn btn-summary" @click="performAction('summary')" :disabled="loading">{{ $t('summary') }}</button>
         <button class="quick-tool-btn btn-polish" @click="performAction('polish')" :disabled="loading">{{ $t('polish') }}</button>
         <button class="quick-tool-btn btn-grammar" @click="performAction('grammar')" :disabled="loading">{{ $t('grammar') }}</button>
-        <button class="quick-tool-btn full-width btn-format" @click="formatOptionsExpanded = !formatOptionsExpanded" :disabled="loading">Định dạng văn bản</button>
+        <button class="quick-tool-btn full-width btn-format" @click="openFormatDialog = true" :disabled="loading">Định dạng văn bản</button>
       </div>
 
       <!-- Ẩn phần hiển thị kết quả AI theo yêu cầu -->
     </div>
 
     <!-- Dialogs -->
-
-    <!-- (Đã thay dialog bằng collapse ở trên) -->
+    <el-dialog v-model="openFormatDialog" width="90vw" class="format-dialog" title="Định dạng Word">
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <el-checkbox v-model="formatOptions.addHeader">Thêm tiêu ngữ</el-checkbox>
+        <el-checkbox v-model="formatOptions.a4Size">Thiết lập A4 + Times New Roman 14pt</el-checkbox>
+        <el-checkbox v-model="formatOptions.justifyMargins">Căn đều (3 -2 -2 - 2 cm)</el-checkbox>
+        <el-checkbox v-model="formatOptions.lineSpacing">Giãn dòng ~1.15, bỏ khoảng trước/sau</el-checkbox>
+      </div>
+      <template #footer>
+        <el-button @click="openFormatDialog = false">Đóng</el-button>
+        <el-button type="primary" @click="applyFormatOptions(); openFormatDialog = false">Áp dụng</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -231,7 +219,7 @@ watch(selectedWordCount, (n) => {
 function buildMessagesForModel() {
   return historyDialog.value
     .filter((m: any) => !m.notice)
-    .map((m: any) => ({ role: m.role, content: m.content }))
+    .map((m: any) => ({ role: m.role, content: (m.hiddenContent ?? m.content) }))
 }
 
 // result
@@ -266,9 +254,8 @@ const formatOptions = ref({
   justifyMargins: true,
   lineSpacing: true
 })
-// openFormatDialog removed (using collapsible options)
-// Format options collapsible state
-const formatOptionsExpanded = ref(false)
+// Hộp thoại popup cho tuỳ chọn định dạng
+const openFormatDialog = ref(false)
 
 // Dynamic model selection based on current API
 // Reactive options for Ollama models
@@ -352,6 +339,27 @@ async function loadOllamaModels() {
 
 // Load Ollama models on mount (app is Ollama-only)
 
+// Tạo nội dung hiển thị rút gọn cho khung chat (tiếng Việt)
+function buildDisplayMessage(
+  taskType: keyof typeof buildInPrompt | 'custom',
+  selectedText: string
+) {
+  const labels: Record<string, string> = {
+    translate: 'Dịch đoạn văn bản',
+    summary: 'Tóm tắt đoạn văn bản',
+    grammar: 'Sửa ngữ pháp đoạn văn bản',
+    polish: 'Chỉnh sửa đoạn văn bản',
+    custom: 'Yêu cầu'
+  }
+  const base = labels[String(taskType)] || 'Yêu cầu'
+  const preview = String(selectedText || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+  const maxLen = 140
+  const shortened = preview.length > maxLen ? preview.slice(0, maxLen) + '…' : preview
+  return preview ? `${base}: ${shortened}` : base
+}
+
 async function template(taskType: keyof typeof buildInPrompt | 'custom') {
   loading.value = true
   let systemMessage
@@ -392,19 +400,20 @@ async function template(taskType: keyof typeof buildInPrompt | 'custom') {
     // Ghi nhớ system prompt cho các lần gọi tiếp theo
     lastSystemPrompt.value = systemMessage
 
-    // Chỉ hiển thị userMessage lên UI để tránh lộ system prompt
+    // Hiển thị nội dung rút gọn lên UI và giữ nội dung đầy đủ cho model
+    const displayMessage = buildDisplayMessage(taskType, selectedText)
     const userPayload = {
       role: 'user',
-      content: userMessage
+      content: displayMessage,
+      hiddenContent: userMessage
     }
-    historyDialog.value = [userPayload]
+    historyDialog.value.push(userPayload)
     // Thêm thông báo đã nhận bao nhiêu từ (nếu có vùng chọn)
     const countSelected = String(selectedText || '').trim()
       ? String(selectedText).trim().split(/\s+/).filter(Boolean).length
       : 0
-    if (countSelected > 0) {
-      historyDialog.value.push({ role: 'assistant', content: `Đã nhận: ${countSelected} từ`, meta: 'Thông báo', notice: true })
-    }
+    // Cập nhật thông báo lựa chọn (duy trì 1 notice duy nhất)
+    updateSelectionNotice(countSelected)
     // Xây dựng payload gửi tới model: chèn system prompt ở đầu, sau đó là lịch sử chat (đã lọc notice)
     const messagesForModel = [
       { role: 'system', content: lastSystemPrompt.value },
@@ -518,8 +527,8 @@ async function sendDirectInput() {
   if (!checkApiKey()) return
   // Lấy nội dung gõ trực tiếp và ghép thêm văn bản đang được bôi đen (nếu có)
   let content = directInput.value.trim()
+  let selectedText = ''
   try {
-    let selectedText = ''
     await Word.run(async (ctx) => {
       const sel = ctx.document.getSelection()
       sel.load('text')
@@ -538,25 +547,28 @@ async function sendDirectInput() {
   }
   loading.value = true
   try {
-    historyDialog.value = [
-      {
-        role: 'user',
-        content
-      }
-    ]
+    historyDialog.value.push({
+      role: 'user',
+      content
+    })
+    // Clean input field after sending
+    directInput.value = ''
     // Thêm thông báo đã nhận bao nhiêu từ (chỉ tính phần văn bản bôi đen)
     const countSelectedOnly = selectedText && selectedText.trim().length > 0
       ? selectedText.trim().split(/\s+/).filter(Boolean).length
       : 0
-    if (countSelectedOnly > 0) {
-      historyDialog.value.push({ role: 'assistant', content: `Đã nhận: ${countSelectedOnly} từ`, meta: 'Thông báo', notice: true })
-    }
+    // Cập nhật thông báo lựa chọn (duy trì 1 notice duy nhất)
+    updateSelectionNotice(countSelectedOnly)
     await API.ollama.createChatCompletionStream({
       ollamaEndpoint: settingForm.value.ollamaEndpoint,
       ollamaModel:
         settingForm.value.ollamaCustomModel ||
         settingForm.value.ollamaModelSelect,
-      messages: buildMessagesForModel(),
+      messages: (
+        lastSystemPrompt.value
+          ? [{ role: 'system', content: lastSystemPrompt.value }, ...buildMessagesForModel()]
+          : buildMessagesForModel()
+      ),
       result,
       historyDialog,
       errorIssue,
