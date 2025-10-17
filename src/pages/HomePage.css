@@ -244,6 +244,16 @@
   border-color: rgba(40, 167, 69, 0.3);
 }
 
+.chat-actions.internal .chat-action-btn.undo-btn {
+  background: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+  border-color: rgba(220, 53, 69, 0.2);
+}
+
+.chat-actions.internal .chat-action-btn.undo-btn:hover:not(:disabled) {
+  background: rgba(220, 53, 69, 0.2);
+  border-color: rgba(220, 53, 69, 0.3);
+}
 .chat-action-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -251,7 +261,7 @@
 
 /* Simple Composer */
 .composer {
-  padding: 10px 16px;
+  padding: 6px 16px;
   background: white;
   border-top: 1px solid #e9ecef;
   flex-shrink: 0;
@@ -348,9 +358,9 @@
 
 /* Simple Quick Tools */
 .quick-tools-row {
-  padding: 12px 20px 16px;
+  padding: 6px 20px 12px;
   background: white;
-  border-top: 1px solid #f1f3f4;
+  border-top: none;
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
@@ -521,11 +531,312 @@
   }
   
   .composer {
-    padding: 12px 20px;
+    padding: 8px 20px;
   }
   
   .quick-tools-row {
-    padding: 16px 30px 20px;
+    padding: 8px 30px 16px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .homepage {
+    --page-max-width: 1000px;
+  }
+}
+
+/* Format dialog: responsive width & internal scroll */
+:global(.format-dialog) {
+  /* Match chat theme */
+  --el-color-primary: #007bff; /* primary button color in dialog */
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  max-width: 720px; /* allow wider content to avoid wrapping */
+  /* Prevent stray list markers inside dialog */
+  list-style: none;
+}
+
+:global(.format-dialog .el-dialog__body) {
+  max-height: 70vh; /* keep dialog visible on small screens */
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px;
+  text-align: left; /* ensure left-aligned content inside dialog */
+}
+
+:global(.format-dialog .el-dialog__header) {
+  padding: 12px 16px;
+  margin-right: 0; /* remove default right margin of Element Plus */
+  border-bottom: 1px solid #f1f3f4;
+}
+
+:global(.format-dialog .el-dialog__title) {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+:global(.format-dialog .el-dialog__footer) {
+  padding: 12px 16px;
+  border-top: 1px solid #f1f3f4;
+}
+
+/* Make options compact and readable */
+:global(.format-dialog .el-checkbox) {
+  display: flex;
+  align-items: center; /* center vertically for single-line labels */
+  padding: 6px 0;
+  width: 100%; /* take full row width */
+}
+
+:global(.format-dialog .el-checkbox__label) {
+  color: #2c3e50;
+  line-height: 1.5;
+  white-space: nowrap; /* keep on one line on wider screens */
+  text-align: left; /* multi-line labels align left */
+  flex: 1; /* allow label to use remaining space */
+  min-width: 0; /* enable flex child to shrink properly */
+}
+
+/* On very small screens, allow wrapping for readability */
+@media (max-width: 420px) {
+  :global(.format-dialog .el-checkbox__label) {
+    white-space: normal;
+  }
+}
+
+/* Tweak checkbox visuals to match chat accent */
+:global(.format-dialog .el-checkbox__inner) {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
+
+:global(.format-dialog .el-checkbox__input.is-checked .el-checkbox__inner),
+:global(.format-dialog .el-checkbox__input.is-focus .el-checkbox__inner) {
+  background-color: #007bff;
+  border-color: #007bff;
+}
+
+/* Primary button matches chat accent */
+:global(.format-dialog .el-button--primary) {
+  background-color: #007bff;
+  border-color: #007bff;
+}
+
+:global(.format-dialog .el-button--primary:hover) {
+  background-color: #0069d9;
+  border-color: #0069d9;
+}
+
+/* Hide unused elements for clean chatbot experience */
+.main-actions,
+.action-grid,
+.tool-btn,
+.word-tools,
+.response-box,
+.result-textarea {
+  display: none;
+}
+
+/* Ẩn nhãn của nút trong chat, chỉ hiện khi hover */
+.chat-actions.internal .chat-action-btn .btn-label {
+  display: none;
+  opacity: 0;
+}
+
+.chat-actions.internal .chat-action-btn:hover:not(:disabled) .btn-label {
+   display: inline;
+   opacity: 1;
+ }
+ 
+ .send-icon {
+   width: 18px;
+   height: 18px;
+ }
+
+/* Simple Quick Tools */
+.quick-tools-row {
+  padding: 6px 20px 12px;
+  background: white;
+  border-top: none;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.quick-tool-btn {
+  padding: 8px 16px;
+  border: 1px solid #dee2e6;
+  background: white;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #495057;
+}
+
+.quick-tool-btn:hover:not(:disabled) {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.quick-tool-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.quick-tool-btn.full-width {
+  flex: 1;
+  min-width: 120px;
+}
+
+/* Simplified Format Options */
+.collapsible-section {
+  background: white;
+  border-top: 1px solid #e9ecef;
+  flex-shrink: 0;
+}
+
+.collapsible-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.collapsible-header:hover {
+  background: #f8f9fa;
+}
+
+.collapsible-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0;
+}
+
+.collapsible-icon {
+  width: 16px;
+  height: 16px;
+  color: #6c757d;
+}
+
+.collapse-icon {
+  width: 16px;
+  height: 16px;
+  color: #6c757d;
+  transition: transform 0.2s ease;
+}
+
+.collapse-icon.expanded {
+  transform: rotate(180deg);
+}
+
+.collapsible-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.collapsible-content.expanded {
+  max-height: 300px;
+}
+
+.settings-grid {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.setting-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.section-actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.section-actions .el-button {
+  background: #007bff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 500;
+  color: white;
+  transition: background-color 0.2s ease;
+}
+
+.section-actions .el-button:hover {
+  background: #0056b3;
+}
+
+/* Progress Section */
+.progress-section {
+  padding: 16px 20px;
+  background: white;
+  border-top: 1px solid #e9ecef;
+  flex-shrink: 0;
+}
+
+.progress-indicator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+}
+
+.spinning-icon {
+  width: 20px;
+  height: 20px;
+  color: #007bff;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.progress-text {
+  font-size: 14px;
+  color: #007bff;
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Responsive Design */
+@media (min-width: 768px) {
+  .homepage {
+    --page-max-width: 800px;
+  }
+  
+  .chat-window {
+    padding: 30px;
+  }
+  
+  .composer {
+    padding: 8px 20px;
+  }
+  
+  .quick-tools-row {
+    padding: 8px 30px 16px;
   }
 }
 

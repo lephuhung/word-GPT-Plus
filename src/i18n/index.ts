@@ -219,7 +219,7 @@ const messages = {
     insertType: 'Chèn',
     insertTypePlaceholder: 'Chọn kiểu chèn',
     replace: 'Thay thế',
-    append: 'Thêm vào',
+    append: 'Thêm',
     newLine: 'Dòng mới',
     NoAction: 'Không thao tác',
     emptyAPIKey: 'Vào cài đặt để thiết lập API key',
