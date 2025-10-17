@@ -188,45 +188,65 @@
   text-justify: inter-word;
 }
 
-/* Action buttons under assistant messages */
-/* Action buttons placed outside assistant messages */
+/* Action buttons inside assistant messages */
 .chat-actions {
-  margin-top: 6px;
+  margin-top: 12px;
   display: flex;
   gap: 8px;
+  justify-content: flex-start;
 }
 
-.chat-actions.external {
-  align-self: flex-start;
-  margin-left: 6px;
+.chat-actions.internal {
+  /* Buttons inside the chat bubble */
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .chat-action-btn {
-  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
   font-size: 12px;
-  border-radius: 16px;
+  border-radius: 12px;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition: all 0.2s ease;
+  font-weight: 500;
 }
 
-/* Simple colors for the two buttons */
-.chat-action-btn.replace-btn {
-  background: #007bff;
-  color: #ffffff;
+.action-icon {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
 }
 
-.chat-action-btn.replace-btn:hover {
-  background: #0069d9;
+/* Button styles for internal placement */
+.chat-actions.internal .chat-action-btn.replace-btn {
+  background: rgba(0, 123, 255, 0.1);
+  color: #007bff;
+  border-color: rgba(0, 123, 255, 0.2);
 }
 
-.chat-action-btn.append-btn {
-  background: #28a745;
-  color: #ffffff;
+.chat-actions.internal .chat-action-btn.replace-btn:hover:not(:disabled) {
+  background: rgba(0, 123, 255, 0.2);
+  border-color: rgba(0, 123, 255, 0.3);
 }
 
-.chat-action-btn.append-btn:hover {
-  background: #218838;
+.chat-actions.internal .chat-action-btn.append-btn {
+  background: rgba(40, 167, 69, 0.1);
+  color: #28a745;
+  border-color: rgba(40, 167, 69, 0.2);
+}
+
+.chat-actions.internal .chat-action-btn.append-btn:hover:not(:disabled) {
+  background: rgba(40, 167, 69, 0.2);
+  border-color: rgba(40, 167, 69, 0.3);
+}
+
+.chat-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Simple Composer */

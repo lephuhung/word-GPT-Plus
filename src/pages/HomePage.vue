@@ -55,10 +55,21 @@
           :class="['chat-msg', msg.role === 'assistant' ? 'assistant' : 'user', msg.notice ? 'notice' : '']">
           <div class="chat-meta">{{ msg.meta || (msg.role === 'assistant' ? 'Word GPT' : 'Bạn') }}</div>
           <pre class="chat-content">{{ msg.content }}</pre>
-        </div>
-        <div v-if="msg.role === 'assistant' && !msg.notice" class="chat-actions external">
-          <button class="chat-action-btn replace-btn" @click="insertFromMessage(idx, 'replace')" :disabled="loading">{{ $t('replace') }}</button>
-          <button class="chat-action-btn append-btn" @click="insertFromMessage(idx, 'append')" :disabled="loading">{{ $t('append') }}</button>
+          <div v-if="msg.role === 'assistant' && !msg.notice" class="chat-actions internal">
+            <button class="chat-action-btn replace-btn" @click="insertFromMessage(idx, 'replace')" :disabled="loading">
+              <svg class="action-icon" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+              </svg>
+              {{ $t('replace') }}
+            </button>
+            <button class="chat-action-btn append-btn" @click="insertFromMessage(idx, 'append')" :disabled="loading">
+              <svg class="action-icon" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2z"/>
+              </svg>
+              {{ $t('append') }}
+            </button>
+          </div>
         </div>
       </template>
         <div v-if="historyDialog.length === 0" class="chat-empty">Chưa có tin nhắn. Hãy nhập yêu cầu ở dưới.</div>
