@@ -257,8 +257,14 @@
   flex-shrink: 0;
 }
 
+.composer-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .composer-input {
-  width: 100%;
+  flex: 1;
   padding: 8px 12px;
   border: 1px solid #dee2e6;
   border-radius: 18px;
@@ -275,6 +281,69 @@
 
 .composer-input::placeholder {
   color: #6c757d;
+}
+
+.upload-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #dee2e6;
+  border-radius: 50%;
+  background: #f8f9fa;
+  color: #6c757d;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.upload-btn:hover:not(:disabled) {
+  background: #007bff;
+  border-color: #007bff;
+  color: white;
+}
+
+.upload-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.upload-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.send-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #007bff;
+  border-radius: 50%;
+  background: #007bff;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.send-btn:hover:not(:disabled) {
+  background: #0056b3;
+  border-color: #0056b3;
+}
+
+.send-btn:disabled {
+  background: #dee2e6;
+  border-color: #dee2e6;
+  color: #6c757d;
+  cursor: not-allowed;
+}
+
+.send-icon {
+  width: 18px;
+  height: 18px;
 }
 
 /* Simple Quick Tools */

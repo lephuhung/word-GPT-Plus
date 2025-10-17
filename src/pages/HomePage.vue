@@ -76,12 +76,36 @@
       </div>
       <!-- Composer tối giản: chỉ còn ô nhập -->
       <div class="composer">
-        <input
-          v-model="directInput"
-          class="composer-input"
-          placeholder="Nhập yêu cầu (bot sẽ trả lời trong chat)"
-          @keydown.enter.prevent="sendDirectInput"
-        />
+        <div class="composer-container">
+          <button class="upload-btn" @click="triggerFileUpload" :disabled="loading" title="Upload PDF">
+            <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14,2 14,8 20,8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <line x1="10" y1="9" x2="8" y2="9"/>
+            </svg>
+          </button>
+          <input
+            v-model="directInput"
+            class="composer-input"
+            placeholder="Nhập yêu cầu (bot sẽ trả lời trong chat)"
+            @keydown.enter.prevent="sendDirectInput"
+          />
+          <button class="send-btn" @click="sendDirectInput" :disabled="loading || !directInput.trim()" title="Gửi tin nhắn">
+            <svg class="send-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22,2 15,22 11,13 2,9 22,2"/>
+            </svg>
+          </button>
+          <input
+            ref="fileInput"
+            type="file"
+            accept=".pdf"
+            @change="handleFileUpload"
+            style="display: none;"
+          />
+        </div>
       </div>
       <!-- Hiển thị số từ đã chọn khi người dùng bôi đen -->
       <!-- <div class="selection-count" v-if="selectedWordCount > 0">Đã chọn: {{ selectedWordCount }} từ</div> -->
@@ -89,7 +113,7 @@
       <div class="quick-tools-row">
         <button class="quick-tool-btn btn-translate" @click="performAction('translate')" :disabled="loading">{{ $t('translate') }}</button>
         <button class="quick-tool-btn btn-summary" @click="performAction('summary')" :disabled="loading">{{ $t('summary') }}</button>
-        <button class="quick-tool-btn btn-polish" @click="performAction('polish')" :disabled="loading">{{ $t('polish') }}</button>
+        <!-- <button class="quick-tool-btn btn-polish" @click="performAction('polish')" :disabled="loading">{{ $t('polish') }}</button> -->
         <button class="quick-tool-btn btn-grammar" @click="performAction('grammar')" :disabled="loading">{{ $t('grammar') }}</button>
         <button class="quick-tool-btn full-width btn-format" @click="openFormatDialog = true" :disabled="loading">Định dạng văn bản</button>
       </div>
@@ -172,8 +196,35 @@ const removePromptValue = ref<any[]>([])
 
 // Direct prompt input
 const directInput = ref('')
+// File upload functionality
+const fileInput = ref<HTMLInputElement>()
+
 // Composer states (đã bỏ nút + và micro)
 // Bỏ Quick response theo yêu cầu
+
+// File upload functions
+function triggerFileUpload() {
+  fileInput.value?.click()
+}
+
+function handleFileUpload(event: Event) {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  
+  if (!file) return
+  
+  if (file.type !== 'application/pdf') {
+    ElMessage.warning('Chỉ hỗ trợ file PDF')
+    return
+  }
+  
+  // TODO: Implement PDF processing logic here
+  ElMessage.success(`Đã chọn file: ${file.name}`)
+  console.log('Selected PDF file:', file)
+  
+  // Reset input
+  target.value = ''
+}
 
 // Đếm số từ trong vùng văn bản đang bôi đen của Word
 const selectedWordCount = ref(0)

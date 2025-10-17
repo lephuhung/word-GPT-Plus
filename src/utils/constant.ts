@@ -99,20 +99,20 @@ export const buildInPrompt = {
 
     Text to translate: ${text}`
   },
-  polish: {
-    system: (language: string) =>
-      `You are a professional writing improvement assistant. Respond in ${language}.`,
-    user: (
-      text: string,
-      language: string
-    ) => `Improve this text in ${language} for clarity, concision, and readability:
-    - Fix spelling and grammar
-    - Break down overly long sentences
-    - Reduce repetition
-    - Enhance overall flow
+  // polish: {
+  //   system: (language: string) =>
+  //     `You are a professional writing improvement assistant. Respond in ${language}.`,
+  //   user: (
+  //     text: string,
+  //     language: string
+  //   ) => `Improve this text in ${language} for clarity, concision, and readability:
+  //   - Fix spelling and grammar
+  //   - Break down overly long sentences
+  //   - Reduce repetition
+  //   - Enhance overall flow
     
-    Provide only the improved version without explanations and any additional information: ${text}`
-  },
+  //   Provide only the improved version without explanations and any additional information: ${text}`
+  // },
   // academic: {
   //   system: (language: string) =>
   //     `You are an expert academic editor specializing in scholarly publications. Respond in ${language}.`,
