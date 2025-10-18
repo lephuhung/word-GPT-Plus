@@ -282,6 +282,10 @@
   outline: none;
   transition: border-color 0.2s ease;
   background: #f8f9fa;
+  min-height: 36px;
+  max-height: 200px;
+  resize: none;
+  overflow: hidden;
 }
 
 .composer-input:focus {

@@ -98,12 +98,15 @@
               <line x1="10" y1="9" x2="8" y2="9"/>
             </svg>
           </button>
-          <input
+          <textarea
+            ref="composerTextarea"
             v-model="directInput"
             class="composer-input"
             placeholder="Nhập yêu cầu (bot sẽ trả lời trong chat)"
+            rows="1"
+            @input="autoResizeComposer"
             @keydown.enter.prevent="sendDirectInput"
-          />
+          ></textarea>
           <button class="send-btn" @click="sendDirectInput" :disabled="loading || !directInput.trim()" title="Gửi tin nhắn">
             <svg class="send-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="22" y1="2" x2="11" y2="13"/>
@@ -154,7 +157,7 @@
 import { ElMessage } from 'element-plus'
 import { Settings, Loader2, Zap, ChevronDown } from 'lucide-vue-next'
 import { User } from 'lucide-vue-next'
-import { onBeforeMount, ref, watch, computed } from 'vue'
+import { onBeforeMount, onMounted, nextTick, ref, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 
@@ -346,6 +349,21 @@ const removePromptValue = ref<any[]>([])
 const directInput = ref('')
 // File upload functionality
 const fileInput = ref<HTMLInputElement>()
+
+// Auto-resize composer textarea
+const composerTextarea = ref<HTMLTextAreaElement | null>(null)
+function autoResizeComposer(e?: Event) {
+  const el = (e?.target as HTMLTextAreaElement) || composerTextarea.value
+  if (!el) return
+  el.style.height = 'auto'
+  const max = 300
+  el.style.height = Math.min(el.scrollHeight, max) + 'px'
+}
+onMounted(() => {
+  nextTick(() => {
+    autoResizeComposer()
+  })
+})
 
 // Composer states (đã bỏ nút + và micro)
 // Bỏ Quick response theo yêu cầu
@@ -768,6 +786,7 @@ async function sendDirectInput() {
     })
     // Clean input field after sending
     directInput.value = ''
+    nextTick(() => autoResizeComposer())
     // Thêm thông báo đã nhận bao nhiêu từ (chỉ tính phần văn bản bôi đen)
     const countSelectedOnly = selectedText && selectedText.trim().length > 0
       ? selectedText.trim().split(/\s+/).filter(Boolean).length
