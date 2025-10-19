@@ -48,42 +48,42 @@
 
     <!-- Khung chat toàn trang -->
     <div class="section chat-section">
-     
+
       <div class="chat-window">
-      <template v-for="(msg, idx) in historyDialog">
-        <div
-          :class="['chat-msg', msg.role === 'assistant' ? 'assistant' : 'user', msg.notice ? 'notice' : '']">
-          <div class="chat-meta">{{ msg.meta || (msg.role === 'assistant' ? 'Word GPT' : 'Bạn') }}</div>
-          <pre class="chat-content">{{ msg.content }}</pre>
-          <div v-if="msg.role === 'assistant' && !msg.notice && !msg.noActions" class="chat-actions internal">
-            <button class="chat-action-btn replace-btn" @click="insertFromMessage(idx, 'replace')" :disabled="loading" :title="$t('replace')" aria-label="Thay thế">
-              <svg class="action-icon" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
-                <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
-              </svg>
-              <span class="btn-label">{{ $t('replace') }}</span>
-            </button>
-            <button class="chat-action-btn append-btn" @click="insertFromMessage(idx, 'append')" :disabled="loading" :title="$t('append')" aria-label="Thêm vào">
-              <svg class="action-icon" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2z"/>
-              </svg>
-              <span class="btn-label">{{ $t('append') }}</span>
-            </button>
-            <button
-              class="chat-action-btn undo-btn"
-              @click="performUndo"
-              :disabled="loading || !(undoState.enabled && undoState.msgIdx === idx)"
-              :title="'Hoàn tác'"
-              aria-label="Hoàn tác"
-            >
-              <svg class="action-icon" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M3.5 1a.5.5 0 0 1 .5.5V4h8a4 4 0 1 1 0 8H8a.5.5 0 0 1 0-1h4a3 3 0 1 0 0-6H4v2.5a.5.5 0 0 1-1 0v-6A.5.5 0 0 1 3.5 1z"/>
-              </svg>
-              <span class="btn-label">Hoàn tác</span>
-            </button>
+        <template v-for="(msg, idx) in historyDialog">
+          <div :class="['chat-msg', msg.role === 'assistant' ? 'assistant' : 'user', msg.notice ? 'notice' : '']">
+            <div class="chat-meta">{{ msg.meta || (msg.role === 'assistant' ? 'Word GPT' : 'Bạn') }}</div>
+            <pre class="chat-content">{{ msg.content }}</pre>
+            <div v-if="msg.role === 'assistant' && !msg.notice && !msg.noActions" class="chat-actions internal">
+              <button class="chat-action-btn replace-btn" @click="insertFromMessage(idx, 'replace')" :disabled="loading"
+                :title="$t('replace')" aria-label="Thay thế">
+                <svg class="action-icon" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z" />
+                  <path
+                    d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z" />
+                </svg>
+                <span class="btn-label">{{ $t('replace') }}</span>
+              </button>
+              <button class="chat-action-btn append-btn" @click="insertFromMessage(idx, 'append')" :disabled="loading"
+                :title="$t('append')" aria-label="Thêm vào">
+                <svg class="action-icon" viewBox="0 0 16 16" fill="currentColor">
+                  <path
+                    d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2z" />
+                </svg>
+                <span class="btn-label">{{ $t('append') }}</span>
+              </button>
+              <button class="chat-action-btn undo-btn" @click="performUndo"
+                :disabled="loading || !(undoState.enabled && undoState.msgIdx === idx)" :title="'Hoàn tác'"
+                aria-label="Hoàn tác">
+                <svg class="action-icon" viewBox="0 0 16 16" fill="currentColor">
+                  <path
+                    d="M3.5 1a.5.5 0 0 1 .5.5V4h8a4 4 0 1 1 0 8H8a.5.5 0 0 1 0-1h4a3 3 0 1 0 0-6H4v2.5a.5.5 0 0 1-1 0v-6A.5.5 0 0 1 3.5 1z" />
+                </svg>
+                <span class="btn-label">Hoàn tác</span>
+              </button>
+            </div>
           </div>
-        </div>
-      </template>
+        </template>
         <div v-if="historyDialog.length === 0" class="chat-empty">Chưa có tin nhắn. Hãy nhập yêu cầu ở dưới.</div>
       </div>
       <!-- Composer tối giản: chỉ còn ô nhập -->
@@ -91,45 +91,39 @@
         <div class="composer-container">
           <button class="upload-btn" @click="triggerFileUpload" :disabled="loading" title="Upload PDF">
             <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14,2 14,8 20,8"/>
-              <line x1="16" y1="13" x2="8" y2="13"/>
-              <line x1="16" y1="17" x2="8" y2="17"/>
-              <line x1="10" y1="9" x2="8" y2="9"/>
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14,2 14,8 20,8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+              <line x1="10" y1="9" x2="8" y2="9" />
             </svg>
           </button>
-          <textarea
-            ref="composerTextarea"
-            v-model="directInput"
-            class="composer-input"
-            placeholder="Nhập yêu cầu (bot sẽ trả lời trong chat)"
-            rows="1"
-            @input="autoResizeComposer"
-            @keydown.enter.prevent="sendDirectInput"
-          ></textarea>
-          <button class="send-btn" @click="sendDirectInput" :disabled="loading || !directInput.trim()" title="Gửi tin nhắn">
+          <textarea ref="composerTextarea" v-model="directInput" class="composer-input"
+            placeholder="Nhập yêu cầu (bot sẽ trả lời trong chat)" rows="1" @input="autoResizeComposer"
+            @keydown.enter.prevent="sendDirectInput"></textarea>
+          <button class="send-btn" @click="sendDirectInput" :disabled="loading || !directInput.trim()"
+            title="Gửi tin nhắn">
             <svg class="send-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="22" y1="2" x2="11" y2="13"/>
-              <polygon points="22,2 15,22 11,13 2,9 22,2"/>
+              <line x1="22" y1="2" x2="11" y2="13" />
+              <polygon points="22,2 15,22 11,13 2,9 22,2" />
             </svg>
           </button>
-          <input
-            ref="fileInput"
-            type="file"
-            accept=".pdf"
-            @change="handleFileUpload"
-            style="display: none;"
-          />
+          <input ref="fileInput" type="file" accept=".pdf" @change="handleFileUpload" style="display: none;" />
         </div>
       </div>
       <!-- Hiển thị số từ đã chọn khi người dùng bôi đen -->
       <!-- <div class="selection-count" v-if="selectedWordCount > 0">Đã chọn: {{ selectedWordCount }} từ</div> -->
       <!-- Hàng nút nhanh cho AI tools (4 nút nhỏ) -->
       <div class="quick-tools-row">
-        <button class="quick-tool-btn btn-translate" @click="performAction('translate')" :disabled="loading">{{ $t('translate') }}</button>
-        <button class="quick-tool-btn btn-summary" @click="performAction('summary')" :disabled="loading">{{ $t('summary') }}</button>
+        <button class="quick-tool-btn btn-translate" @click="performAction('translate')" :disabled="loading">{{
+          $t('translate') }}</button>
+        <button class="quick-tool-btn btn-summary" @click="performAction('summary')" :disabled="loading">{{
+          $t('summary')
+        }}</button>
         <!-- <button class="quick-tool-btn btn-polish" @click="performAction('polish')" :disabled="loading">{{ $t('polish') }}</button> -->
-        <button class="quick-tool-btn btn-grammar" @click="performAction('grammar')" :disabled="loading">{{ $t('grammar') }}</button>
+        <button class="quick-tool-btn btn-grammar" @click="performAction('grammar')" :disabled="loading">{{
+          $t('grammar')
+        }}</button>
         <!-- Nút Hoàn tác đã được chuyển vào mỗi ô chat, gỡ khỏi quick-tools -->
         <!-- <button class="quick-tool-btn full-width btn-format" @click="openFormatDialog = true" :disabled="loading">Định dạng văn bản</button> -->
       </div>
@@ -168,6 +162,14 @@ import { buildInPrompt } from '@/utils/constant'
 import { promptDbInstance } from '@/store/promtStore'
 
 import { checkAuth } from '@/utils/common'
+import { 
+  getOrCreateDocumentId, 
+  getChatHistory, 
+  saveChatHistory, 
+  addMessageToHistory,
+  type ChatMessage 
+} from '@/utils/documentStorage'
+import { addChatMessage, createUserMessage, createAssistantMessage } from '@/utils/chatHelpers'
 import { localStorageKey } from '@/utils/enum'
 import useSettingForm from '@/utils/settingForm'
 import { settingPreset } from '@/utils/settingPreset'
@@ -226,6 +228,7 @@ const SYSTEM_PROMPT = `
  - alignment (left, center, right, justify) 
  - lineSpacing 
  - paragraphSpacingBefore / paragraphSpacingAfter 
+ 👉 Không bao gồm khổ giấy hay hướng trang.
  \`\`\`json 
  { 
    "action": "format", 
@@ -278,8 +281,19 @@ const SYSTEM_PROMPT = `
    "action": "chat", 
    "response": "<nội dung>" 
  } 
- \`\`\` 
- 
+ \`\`\`
+ ### 8. "pageSetup" - thiết lập page
+ {
+  "action": "pageSetup",
+  "parameters": {
+    "scope": "all", 
+    "orientation": "landscape",
+    "pageSize": "A4",
+    "margins": { "top": 2, "bottom": 2, "left": 3, "right": 2 }
+  }
+}
+
+ \`\`\`
  --- 
  
  ### Quy tắc bắt buộc: 
@@ -376,18 +390,18 @@ function triggerFileUpload() {
 function handleFileUpload(event: Event) {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
-  
+
   if (!file) return
-  
+
   if (file.type !== 'application/pdf') {
     ElMessage.warning('Chỉ hỗ trợ file PDF')
     return
   }
-  
+
   // TODO: Implement PDF processing logic here
   ElMessage.success(`Đã chọn file: ${file.name}`)
   console.log('Selected PDF file:', file)
-  
+
   // Reset input
   target.value = ''
 }
@@ -466,7 +480,9 @@ const displayResult = computed(() => {
 // Word info removed
 const loading = ref(false)
 const router = useRouter()
-const historyDialog = ref<any[]>([])
+const historyDialog = ref<ChatMessage[]>([])
+// Current document ID for chat history management
+const currentDocumentId = ref<string>('')
 // Vị trí thông báo nhỏ (notice) trong mảng historyDialog
 const selectionNoticeIndex = ref<number | null>(null)
 
@@ -528,6 +544,7 @@ const addWatch = () => {
 }
 
 async function initData() {
+  console.log('initData: Starting data initialization')
   insertType.value =
     (localStorage.getItem(localStorageKey.insertType) as insertTypes) ||
     'replace'
@@ -538,6 +555,36 @@ async function initData() {
     'Act like a personal assistant.'
   prompt.value = localStorage.getItem(localStorageKey.defaultPrompt) || ''
   lastSystemPrompt.value = SYSTEM_PROMPT
+
+  // Initialize document ID and load chat history
+  try {
+    // Try to use Word API to get/create document ID
+    currentDocumentId.value = await getOrCreateDocumentId()
+    console.log('Document ID from Word API:', currentDocumentId.value)
+  } catch (error) {
+    console.error('Error accessing Word API:', error)
+    // When Word API is not available, use a persistent fallback ID stored in localStorage
+    const fallbackKey = 'wordgpt_fallback_document_id'
+    let fallbackId = localStorage.getItem(fallbackKey)
+    
+    if (!fallbackId) {
+      // Generate a new fallback ID only if none exists
+      fallbackId = `browser_doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      localStorage.setItem(fallbackKey, fallbackId)
+      console.log('Created new fallback document ID:', fallbackId)
+    } else {
+      console.log('Using existing fallback document ID:', fallbackId)
+    }
+    
+    currentDocumentId.value = fallbackId
+  }
+
+  // Load chat history for the determined document ID
+  const savedHistory = getChatHistory(currentDocumentId.value)
+  console.log('Loaded chat history for document:', currentDocumentId.value, savedHistory)
+  historyDialog.value = savedHistory
+  console.log('historyDialog.value after loading:', historyDialog.value)
+  console.log('initData: Data initialization completed')
 }
 
 function handleInsertTypeChange(val: insertTypes) {
@@ -643,12 +690,10 @@ async function template(taskType: keyof typeof buildInPrompt | 'custom') {
 
     // Hiển thị nội dung rút gọn lên UI và giữ nội dung đầy đủ cho model
     const displayMessage = buildDisplayMessage(taskType, selectedText)
-    const userPayload = {
-      role: 'user',
-      content: displayMessage,
-      hiddenContent: userMessage
-    }
-    historyDialog.value.push(userPayload)
+    const userPayload = createUserMessage(displayMessage)
+    // Add hiddenContent for backward compatibility
+    ;(userPayload as any).hiddenContent = userMessage
+    addChatMessage(historyDialog.value, currentDocumentId.value, userPayload)
     // Thêm thông báo đã nhận bao nhiêu từ (nếu có vùng chọn)
     const countSelected = String(selectedText || '').trim()
       ? String(selectedText).trim().split(/\s+/).filter(Boolean).length
@@ -683,7 +728,7 @@ async function template(taskType: keyof typeof buildInPrompt | 'custom') {
     ElMessage.error('Something is wrong')
     return
   }
-  
+
 }
 
 function checkApiKey() {
@@ -720,10 +765,7 @@ async function continueChat() {
   if (!checkApiKey()) return
   loading.value = true
   try {
-    historyDialog.value.push({
-      role: 'user',
-      content: 'continue'
-    })
+    addChatMessage(historyDialog.value, currentDocumentId.value, createUserMessage('continue'))
     // Nếu có system prompt trước đó, thêm vào đầu payload gửi model
     const messagesForModel = lastSystemPrompt.value
       ? [{ role: 'system', content: lastSystemPrompt.value }, ...buildMessagesForModel()]
@@ -752,7 +794,7 @@ async function continueChat() {
     ElMessage.error('Something is wrong')
     return
   }
-  
+
 }
 
 // Send direct prompt to AI API
@@ -780,10 +822,7 @@ async function sendDirectInput() {
   }
   loading.value = true
   try {
-    historyDialog.value.push({
-      role: 'user',
-      content
-    })
+    addChatMessage(historyDialog.value, currentDocumentId.value, createUserMessage(content))
     // Clean input field after sending
     directInput.value = ''
     nextTick(() => autoResizeComposer())
@@ -820,7 +859,7 @@ async function sendDirectInput() {
     ElMessage.error('Something is wrong')
     return
   }
-  
+
 }
 
 // Manual insert from a specific assistant message
@@ -960,7 +999,7 @@ async function executeWordAction(actionObj: any) {
     if (action === 'chat') {
       const responseText = String(actionObj?.response || p?.text || '')
       if (responseText) {
-        historyDialog.value.push({ role: 'assistant', content: responseText })
+        addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage(responseText))
       }
       return
     }
@@ -976,7 +1015,7 @@ async function executeWordAction(actionObj: any) {
         target.insertText(text, 'After')
         await ctx.sync()
       })
-      historyDialog.value.push({ role: 'assistant', content: 'Đã chèn văn bản' })
+      addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage('Đã chèn văn bản'))
       return
     }
     if (action === 'replace') {
@@ -992,7 +1031,7 @@ async function executeWordAction(actionObj: any) {
         }
         await ctx.sync()
       })
-      historyDialog.value.push({ role: 'assistant', content: 'Đã thay thế văn bản', noActions: true })
+      addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage('Đã thay thế văn bản', true))
       return
     }
     if (action === 'format') {
@@ -1021,7 +1060,7 @@ async function executeWordAction(actionObj: any) {
         }
         await ctx.sync()
       })
-      historyDialog.value.push({ role: 'assistant', content: 'Đã định dạng văn bản', noActions: true })
+      addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage('Đã định dạng văn bản', true))
       return
     }
     if (action === 'highlight') {
@@ -1036,7 +1075,7 @@ async function executeWordAction(actionObj: any) {
         }
         await ctx.sync()
       })
-      historyDialog.value.push({ role: 'assistant', content: 'Đã tô màu nổi bật', noActions: true })
+      addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage('Đã tô màu nổi bật', true))
       return
     }
     if (action === 'comment') {
@@ -1046,13 +1085,13 @@ async function executeWordAction(actionObj: any) {
         if (sel && typeof sel.insertComment === 'function') {
           sel.insertComment(text)
         } else if ((ctx.document as any).comments && typeof (ctx.document as any).comments.add === 'function') {
-          ;(ctx.document as any).comments.add(sel, text)
+          ; (ctx.document as any).comments.add(sel, text)
         } else {
           sel.insertText(`[Nhận xét] ${text}`, 'Before')
         }
         await ctx.sync()
       })
-      historyDialog.value.push({ role: 'assistant', content: 'Đã thêm nhận xét' })
+      addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage('Đã thêm nhận xét'))
       return
     }
     if (action === 'query') {
@@ -1063,7 +1102,7 @@ async function executeWordAction(actionObj: any) {
           sel.font.load('name,size,bold,italic,color')
           await ctx.sync()
           const info = `Phông chữ: ${sel.font.name}, Cỡ: ${sel.font.size}pt, Đậm: ${sel.font.bold ? 'Có' : 'Không'}, Nghiêng: ${sel.font.italic ? 'Có' : 'Không'}`
-          historyDialog.value.push({ role: 'assistant', content: info, noActions: true })
+          addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage(info, true))
         })
         return
       }
@@ -1076,7 +1115,7 @@ async function executeWordAction(actionObj: any) {
           total.load('text')
           await ctx.sync()
           const count = String(total.text || '').trim().split(/\s+/).filter(Boolean).length
-          historyDialog.value.push({ role: 'assistant', content: `Số chữ: ${count}`, noActions: true })
+          addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage(`Số chữ: ${count}`, true))
         })
         return
       }
@@ -1085,34 +1124,90 @@ async function executeWordAction(actionObj: any) {
           const ooxml = ctx.document.body.getOoxml()
           await ctx.sync()
           const xml = ooxml.value || ''
+          const twipsPerCm = 566.9291339
           const pgSz = xml.match(/<w:pgSz[^>]*w:w="(\d+)"[^>]*w:h="(\d+)"[^>]*?(w:orient="([^"]+)")?/)
           if (pgSz) {
             const wTw = parseInt(pgSz[1], 10)
             const hTw = parseInt(pgSz[2], 10)
             const orient = pgSz[4] || 'portrait'
-            const cm = (tw: number) => Math.round((tw / 566.929) * 100) / 100
+            const cm = (tw: number) => Math.round((tw / twipsPerCm) * 100) / 100
             const info = `Khổ giấy: ${cm(wTw)}cm x ${cm(hTw)}cm, Hướng: ${orient}`
-            historyDialog.value.push({ role: 'assistant', content: info, noActions: true })
+            addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage(info, true))
           } else {
-            historyDialog.value.push({ role: 'assistant', content: 'Không lấy được khổ giấy', noActions: true })
+            addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage('Không lấy được khổ giấy', true))
           }
         })
         return
       }
-      historyDialog.value.push({ role: 'assistant', content: 'Không hỗ trợ loại truy vấn này', noActions: true })
+      addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage('Không hỗ trợ loại truy vấn này', true))
       return
     }
-    historyDialog.value.push({ role: 'assistant', content: `Hành động chưa hỗ trợ: ${action}` })
+    if (action === "pageSetup") {
+      const orientation = String(p?.orientation || "").toLowerCase();
+      const size = String(p?.pageSize || "").toUpperCase();
+      const margins = p?.margins || {};
+
+      try {
+        await Word.run(async ctx => {
+          const sections = ctx.document.sections;
+          ctx.load(sections, "items/pageSetup");
+          await ctx.sync();
+
+          const cmToPt = cm => (typeof cm === "number" ? cm * 28.35 : undefined);
+
+          const paperMap = {
+            A4: Word.PaperType.a4,
+            LETTER: Word.PaperType.letter,
+            LEGAL: Word.PaperType.legal
+          };
+
+          for (const s of sections.items) {
+            const setup = s.pageSetup;
+
+            if (orientation) {
+              setup.orientation =
+                orientation === "landscape"
+                  ? Word.Orientation.landscape
+                  : Word.Orientation.portrait;
+            }
+
+            if (size && paperMap[size]) setup.paperSize = paperMap[size];
+
+            if (margins.top) setup.topMargin = cmToPt(margins.top);
+            if (margins.bottom) setup.bottomMargin = cmToPt(margins.bottom);
+            if (margins.left) setup.leftMargin = cmToPt(margins.left);
+            if (margins.right) setup.rightMargin = cmToPt(margins.right);
+          }
+
+          await ctx.sync();
+
+          let msg = `Đã thiết lập toàn bộ trang: ${size || "mặc định"}, hướng ${orientation || "portrait"}`;
+          if (Object.keys(margins).length) {
+            msg += `, lề: T${margins.top || 0}–D${margins.bottom || 0}–T${margins.left || 0}–P${margins.right || 0} cm`;
+          }
+          addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage(msg))
+        });
+      } catch (err) {
+        console.error("Page setup failed:", err);
+        addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage("Không thể thay đổi Page Setup. Có thể do tài liệu bị khóa hoặc Add-in không có quyền."))
+      }
+      return;
+    }
+
+    // Default case for unsupported actions
+    addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage(`Hành động chưa hỗ trợ: ${action}`))
   } catch (e) {
     console.error('Thực thi hành động thất bại:', e)
     ElMessage.error('Thực thi hành động thất bại')
   }
 }
 onBeforeMount(() => {
+  console.log('onBeforeMount: Starting initialization')
   addWatch()
   initData()
   loadOllamaModels()
   registerSelectionHandler()
+  console.log('onBeforeMount: Initialization completed')
 })
 </script>
 

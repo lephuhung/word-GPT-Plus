@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Document Storage</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        button { margin: 5px; padding: 10px; }
+        .output { background: #f5f5f5; padding: 10px; margin: 10px 0; }
+        input { padding: 5px; margin: 5px; width: 200px; }
+    </style>
+</head>
+<body>
+    <h1>Test Document Storage & Chat History</h1>
+    
+    <div class="section">
+        <h3>1. Test Document ID</h3>
+        <button onclick="setTestDocumentId()">Set Test Document ID</button>
+        <button onclick="getDocumentId()">Get Current Document ID</button>
+        <div id="documentIdOutput" class="output"></div>
+    </div>
+
+    <div class="section">
+        <h3>2. Test Chat History</h3>
+        <input type="text" id="messageInput" placeholder="Nhập tin nhắn test">
+        <button onclick="addTestMessage()">Add Test Message</button>
+        <button onclick="loadChatHistory()">Load Chat History</button>
+        <button onclick="clearHistory()">Clear History</button>
+        <div id="chatOutput" class="output"></div>
+    </div>
+
+    <div class="section">
+        <h3>3. Test Multiple Documents</h3>
+        <input type="text" id="docIdInput" placeholder="Nhập Document ID">
+        <button onclick="switchDocument()">Switch Document</button>
+        <button onclick="showAllDocuments()">Show All Documents</button>
+        <div id="multiDocOutput" class="output"></div>
+    </div>
+
+    <div class="section">
+        <h3>4. LocalStorage Inspector</h3>
+        <button onclick="showLocalStorage()">Show All LocalStorage</button>
+        <button onclick="clearAllStorage()">Clear All Storage</button>
+        <div id="storageOutput" class="output"></div>
+    </div>
+
+    <script>
+        let currentDocumentId = 'test_document_123';
+
+        function setTestDocumentId() {
+            currentDocumentId = 'test_document_123';
+            document.getElementById('documentIdOutput').innerHTML = 
+                `<strong>Document ID set to:</strong> ${currentDocumentId}`;
+        }
+
+        function getDocumentId() {
+            document.getElementById('documentIdOutput').innerHTML = 
+                `<strong>Current Document ID:</strong> ${currentDocumentId}`;
+        }
+
+        function addTestMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+            if (!message) {
+                alert('Vui lòng nhập tin nhắn');
+                return;
+            }
+
+            const chatMessage = {
+                id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                role: 'user',
+                content: message,
+                timestamp: Date.now()
+            };
+
+            // Add to localStorage
+            const key = `wordgpt_chat_${currentDocumentId}`;
+            let history = [];
+            const stored = localStorage.getItem(key);
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                history = parsed.messages || [];
+            }
+            
+            history.push(chatMessage);
+            
+            const historyData = {
+                documentId: currentDocumentId,
+                messages: history,
+                lastUpdated: Date.now()
+            };
+
+            localStorage.setItem(key, JSON.stringify(historyData));
+            
+            messageInput.value = '';
+            loadChatHistory();
+        }
+
+        function loadChatHistory() {
+            const key = `wordgpt_chat_${currentDocumentId}`;
+            const stored = localStorage.getItem(key);
+            
+            let output = `<strong>Chat History for ${currentDocumentId}:</strong><br>`;
+            
+            if (!stored) {
+                output += 'Không có lịch sử chat';
+            } else {
+                const history = JSON.parse(stored);
+                output += `<strong>Document ID:</strong> ${history.documentId}<br>`;
+                output += `<strong>Last Updated:</strong> ${new Date(history.lastUpdated).toLocaleString()}<br>`;
+                output += `<strong>Messages (${history.messages.length}):</strong><br>`;
+                
+                history.messages.forEach((msg, index) => {
+                    output += `${index + 1}. [${msg.role}] ${msg.content} (${new Date(msg.timestamp).toLocaleString()})<br>`;
+                });
+            }
+            
+            document.getElementById('chatOutput').innerHTML = output;
+        }
+
+        function clearHistory() {
+            const key = `wordgpt_chat_${currentDocumentId}`;
+            localStorage.removeItem(key);
+            loadChatHistory();
+        }
+
+        function switchDocument() {
+            const docIdInput = document.getElementById('docIdInput');
+            const newDocId = docIdInput.value.trim();
+            if (!newDocId) {
+                alert('Vui lòng nhập Document ID');
+                return;
+            }
+            
+            currentDocumentId = newDocId;
+            document.getElementById('multiDocOutput').innerHTML = 
+                `<strong>Switched to Document ID:</strong> ${currentDocumentId}`;
+            loadChatHistory();
+        }
+
+        function showAllDocuments() {
+            let output = '<strong>All Documents in LocalStorage:</strong><br>';
+            let count = 0;
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('wordgpt_chat_')) {
+                    const docId = key.replace('wordgpt_chat_', '');
+                    const data = JSON.parse(localStorage.getItem(key));
+                    output += `${++count}. ${docId} (${data.messages.length} messages)<br>`;
+                }
+            }
+            
+            if (count === 0) {
+                output += 'Không có document nào';
+            }
+            
+            document.getElementById('multiDocOutput').innerHTML = output;
+        }
+
+        function showLocalStorage() {
+            let output = '<strong>All LocalStorage Keys:</strong><br>';
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                const value = localStorage.getItem(key);
+                output += `<strong>${key}:</strong> ${value.substring(0, 100)}${value.length > 100 ? '...' : ''}<br><br>`;
+            }
+            
+            document.getElementById('storageOutput').innerHTML = output;
+        }
+
+        function clearAllStorage() {
+            if (confirm('Bạn có chắc muốn xóa tất cả localStorage?')) {
+                localStorage.clear();
+                document.getElementById('storageOutput').innerHTML = 'LocalStorage đã được xóa';
+                loadChatHistory();
+                showAllDocuments();
+            }
+        }
+
+        // Initialize
+        setTestDocumentId();
+        loadChatHistory();
+    </script>
+</body>
+</html>
