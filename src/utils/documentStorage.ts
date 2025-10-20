@@ -9,6 +9,8 @@ export interface ChatMessage {
   content: string
   timestamp: number
   noActions?: boolean
+  meta?: any
+  notice?: any
 }
 
 export interface DocumentChatHistory {

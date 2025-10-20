@@ -130,20 +130,6 @@
 
       <!-- Ẩn phần hiển thị kết quả AI theo yêu cầu -->
     </div>
-
-    <!-- Dialogs -->
-    <el-dialog v-model="openFormatDialog" width="90vw" class="format-dialog" title="Định dạng Word">
-      <div style="display:flex; flex-direction:column; gap:8px;">
-        <el-checkbox v-model="formatOptions.addHeader">Thêm tiêu ngữ</el-checkbox>
-        <el-checkbox v-model="formatOptions.a4Size">Thiết lập A4 + Times New Roman 14pt</el-checkbox>
-        <el-checkbox v-model="formatOptions.justifyMargins">Căn đều (3 -2 -2 - 2 cm)</el-checkbox>
-        <el-checkbox v-model="formatOptions.lineSpacing">Giãn dòng ~1.15, bỏ khoảng trước/sau</el-checkbox>
-      </div>
-      <template #footer>
-        <el-button @click="openFormatDialog = false">Đóng</el-button>
-        <el-button type="primary" @click="applyFormatOptions; openFormatDialog = false">Áp dụng</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -1018,7 +1004,7 @@ async function executeWordAction(actionObj: any) {
         let target = ctx.document.getSelection()
         if (position === 'start') target = ctx.document.body.getRange('Start')
         else if (position === 'end') target = ctx.document.body.getRange('End')
-        else if (position === 'beforeSelection') target = ctx.document.getSelection().getRange('Before')
+        else if (position === 'beforeSelection') target = ctx.document.getSelection().getRange('Start')
         else if (position === 'afterSelection') target = ctx.document.getSelection().getRange('After')
         target.insertText(text, 'After')
         await ctx.sync()
@@ -1110,7 +1096,7 @@ async function executeWordAction(actionObj: any) {
           sel.font.load('name,size,bold,italic,color')
           await ctx.sync()
           const info = `Phông chữ: ${sel.font.name}, Cỡ: ${sel.font.size}pt, Đậm: ${sel.font.bold ? 'Có' : 'Không'}, Nghiêng: ${sel.font.italic ? 'Có' : 'Không'}`
-          addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage(info, true))
+          addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage(info, false))
         })
         return
       }
@@ -1141,7 +1127,7 @@ async function executeWordAction(actionObj: any) {
             `Số đoạn văn: ${paragraphCount}`
           ].join('\n')
           
-          addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage(info, true))
+          addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage(info, false))
         })
         return
       }
@@ -1158,9 +1144,9 @@ async function executeWordAction(actionObj: any) {
             const orient = pgSz[4] || 'portrait'
             const cm = (tw: number) => Math.round((tw / twipsPerCm) * 100) / 100
             const info = `Khổ giấy: ${cm(wTw)}cm x ${cm(hTw)}cm, Hướng: ${orient}`
-            addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage(info, true))
+            addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage(info, false))
           } else {
-            addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage('Không lấy được khổ giấy', true))
+            addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage('Không lấy được khổ giấy', false))
           }
         })
         return
@@ -1169,14 +1155,14 @@ async function executeWordAction(actionObj: any) {
         try {
           const info = await getWordDocumentInfo()
           const formattedInfo = formatWordInfoVi(info)
-          addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage(formattedInfo, true))
+          addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage(formattedInfo, false))
         } catch (error) {
           console.error('Error getting document info:', error)
-          addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage('Không thể lấy thông tin tài liệu', true))
+          addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage('Không thể lấy thông tin tài liệu', false))
         }
         return
       }
-      addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage('Không hỗ trợ loại truy vấn này', true))
+      addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage('Không hỗ trợ loại truy vấn này', false))
       return
     }
     if (action === "pageSetup") {
@@ -1193,7 +1179,7 @@ async function executeWordAction(actionObj: any) {
       console.log('- Office object available:', typeof Office !== 'undefined');
       
       if (typeof Office !== 'undefined' && Office.context) {
-        console.log('- Office version:', Office.context.requirements?.isSetSupported ? 'Modern' : 'Legacy');
+        // console.log('- Office version:', Office.context.requirements?.isSetSupported ? 'Modern' : 'Legacy');
         console.log('- Host:', Office.context.host);
         console.log('- Platform:', Office.context.platform);
       }
@@ -1396,3 +1382,4 @@ onBeforeMount(() => {
 </script>
 
 <style scoped src="./HomePage.css"></style>
+
