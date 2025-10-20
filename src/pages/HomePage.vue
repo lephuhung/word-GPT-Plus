@@ -173,6 +173,7 @@ import { addChatMessage, createUserMessage, createAssistantMessage } from '@/uti
 import { localStorageKey } from '@/utils/enum'
 import useSettingForm from '@/utils/settingForm'
 import { settingPreset } from '@/utils/settingPreset'
+import { getWordDocumentInfo, formatWordInfoVi } from '@/utils/wordInfo'
 
 import HomePageDialog from '@/components/HomePageDialog.vue'
 import HomePageAddDialog from '@/components/HomePageAddDialog.vue'
@@ -245,12 +246,13 @@ const SYSTEM_PROMPT = `
  \`\`\` 
  position có thể là: "start", "end", "beforeSelection", "afterSelection" 
  
- #### 4. "query" – truy vấn thông tin tài liệu 
+ #### 4. "query" – truy vấn thông tin tài liệu hoặc văn bản 
  Cho phép các loại: 
  - pageSize (A4, Letter, v.v.) 
  - orientation (portrait/landscape) 
  - fontInfo (font và cỡ chữ đang chọn) 
- - wordCount 
+ - wordCount (số chữ, ký tự, đoạn văn)
+ - documentInfo (thông tin toàn diện về tài liệu)
  \`\`\`json 
  { 
    "action": "query", 
@@ -316,6 +318,12 @@ const SYSTEM_PROMPT = `
  
  - "Khổ giấy hiện tại là gì?": 
  → {"action":"query","parameters":{"queryType":"pageSize"}} 
+ 
+ - "Số chữ trong tài liệu?": 
+ → {"action":"query","parameters":{"queryType":"wordCount"}} 
+ 
+ - "Thông tin chi tiết tài liệu?": 
+ → {"action":"query","parameters":{"queryType":"documentInfo"}} 
  
  - "Dịch đoạn này sang tiếng Anh": 
  → {"action":"chat","response":"<văn bản dịch>"} 
@@ -720,7 +728,7 @@ async function template(taskType: keyof typeof buildInPrompt | 'custom') {
     })
     await handleApiResponseWithPrompt(String(result.value || ''))
   } else {
-    ElMessage.error('Set Ollama endpoint first')
+    ElMessage.error('Set Olla endpoint first')
     return
   }
   if (errorIssue.value === true) {
@@ -1113,9 +1121,27 @@ async function executeWordAction(actionObj: any) {
           const end = body.getRange('End')
           const total = rng.expandTo(end)
           total.load('text')
+          
+          // Load paragraphs for paragraph count
+          const paragraphs = body.paragraphs
+          paragraphs.load('items')
+          
           await ctx.sync()
-          const count = String(total.text || '').trim().split(/\s+/).filter(Boolean).length
-          addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage(`Số chữ: ${count}`, true))
+          
+          const text = String(total.text || '').trim()
+          const wordCount = text.split(/\s+/).filter(Boolean).length
+          const charCount = text.length
+          const charCountNoSpaces = text.replace(/\s/g, '').length
+          const paragraphCount = paragraphs.items.length
+          
+          const info = [
+            `Số chữ: ${wordCount}`,
+            `Số ký tự (có khoảng trắng): ${charCount}`,
+            `Số ký tự (không khoảng trắng): ${charCountNoSpaces}`,
+            `Số đoạn văn: ${paragraphCount}`
+          ].join('\n')
+          
+          addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage(info, true))
         })
         return
       }
@@ -1139,6 +1165,17 @@ async function executeWordAction(actionObj: any) {
         })
         return
       }
+      if (qt === 'documentInfo') {
+        try {
+          const info = await getWordDocumentInfo()
+          const formattedInfo = formatWordInfoVi(info)
+          addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage(formattedInfo, true))
+        } catch (error) {
+          console.error('Error getting document info:', error)
+          addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage('Không thể lấy thông tin tài liệu', true))
+        }
+        return
+      }
       addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage('Không hỗ trợ loại truy vấn này', true))
       return
     }
@@ -1147,39 +1184,169 @@ async function executeWordAction(actionObj: any) {
       const size = String(p?.pageSize || "").toUpperCase();
       const margins = p?.margins || {};
 
+      console.log('🔧 PageSetup Debug - Starting pageSetup operation');
+      console.log('📋 Parameters:', { orientation, size, margins });
+      
+      // Check Word API availability and version
+      console.log('🔍 Word API Check:');
+      console.log('- Word object available:', typeof Word !== 'undefined');
+      console.log('- Office object available:', typeof Office !== 'undefined');
+      
+      if (typeof Office !== 'undefined' && Office.context) {
+        console.log('- Office version:', Office.context.requirements?.isSetSupported ? 'Modern' : 'Legacy');
+        console.log('- Host:', Office.context.host);
+        console.log('- Platform:', Office.context.platform);
+      }
+
       try {
         await Word.run(async ctx => {
+          console.log('📄 Document Context - Starting Word.run');
+          
           const sections = ctx.document.sections;
-          ctx.load(sections, "items/pageSetup");
-          await ctx.sync();
-
-          const cmToPt = cm => (typeof cm === "number" ? cm * 28.35 : undefined);
-
-          const paperMap = {
-            A4: Word.PaperType.a4,
-            LETTER: Word.PaperType.letter,
-            LEGAL: Word.PaperType.legal
-          };
-
-          for (const s of sections.items) {
-            const setup = s.pageSetup;
-
-            if (orientation) {
-              setup.orientation =
-                orientation === "landscape"
-                  ? Word.Orientation.landscape
-                  : Word.Orientation.portrait;
+          console.log('📑 Sections object created');
+          
+          // Check what properties are available
+          console.log('🔍 Available Word properties check:');
+          console.log('- Word.PaperType available:', typeof (Word as any).PaperType !== 'undefined');
+          console.log('- Word.Orientation available:', typeof (Word as any).Orientation !== 'undefined');
+          
+          try {
+            ctx.load(sections, "items");
+            await ctx.sync();
+            console.log('✅ Basic sections loaded, count:', sections.items.length);
+            
+            // Try to load pageSetup properties
+            try {
+              ctx.load(sections, "items/pageSetup");
+              await ctx.sync();
+              console.log('✅ PageSetup properties loaded successfully');
+            } catch (pageSetupError) {
+              console.error('❌ Failed to load pageSetup properties:', pageSetupError);
+              throw new Error('PageSetup properties not available in this Word version');
             }
-
-            if (size && paperMap[size]) setup.paperSize = paperMap[size];
-
-            if (margins.top) setup.topMargin = cmToPt(margins.top);
-            if (margins.bottom) setup.bottomMargin = cmToPt(margins.bottom);
-            if (margins.left) setup.leftMargin = cmToPt(margins.left);
-            if (margins.right) setup.rightMargin = cmToPt(margins.right);
+            
+          } catch (sectionsError) {
+            console.error('❌ Failed to load sections:', sectionsError);
+            throw sectionsError;
           }
 
+          const cmToPt = (cm: number) => (typeof cm === "number" ? cm * 28.35 : undefined);
+
+          // Paper size dimensions in points (1 inch = 72 points)
+          const paperDimensions: Record<string, { width: number; height: number }> = {
+            A4: { width: 595, height: 842 },      // 21.0 x 29.7 cm
+            LETTER: { width: 612, height: 792 },  // 8.5 x 11 inches
+            LEGAL: { width: 612, height: 1008 },  // 8.5 x 14 inches
+            A3: { width: 842, height: 1191 },     // 29.7 x 42.0 cm
+            A5: { width: 420, height: 595 }       // 14.8 x 21.0 cm
+          };
+
+          // Use safer property access
+          const paperMap: Record<string, any> = {};
+          
+          // Check if PaperType is available
+          if (typeof (Word as any).PaperType !== 'undefined') {
+            console.log('📏 PaperType available, setting up paper map');
+            paperMap.A4 = (Word as any).PaperType.a4;
+            paperMap.LETTER = (Word as any).PaperType.letter;
+            paperMap.LEGAL = (Word as any).PaperType.legal;
+          } else {
+            console.warn('⚠️ Word.PaperType not available - using fallback dimensions');
+          }
+
+          console.log('🔄 Processing sections, count:', sections.items.length);
+          
+          for (let i = 0; i < sections.items.length; i++) {
+            const s = sections.items[i];
+            console.log(`📄 Processing section ${i + 1}`);
+            
+            // Check if pageSetup property exists
+            if (!(s as any).pageSetup) {
+              console.error(`❌ Section ${i + 1} does not have pageSetup property`);
+              continue;
+            }
+            
+            const setup = (s as any).pageSetup;
+            console.log(`✅ Section ${i + 1} pageSetup object available`);
+
+            if (orientation) {
+              console.log(`🔄 Setting orientation to: ${orientation}`);
+              try {
+                if (typeof (Word as any).Orientation !== 'undefined') {
+                  setup.orientation =
+                    orientation === "landscape"
+                      ? (Word as any).Orientation.landscape
+                      : (Word as any).Orientation.portrait;
+                  console.log('✅ Orientation set successfully using Word.Orientation');
+                } else {
+                  console.warn('⚠️ Word.Orientation not available, using string values');
+                  // Try setting orientation as string
+                  setup.orientation = orientation === "landscape" ? "landscape" : "portrait";
+                  console.log('✅ Orientation set using string value');
+                }
+              } catch (orientationError) {
+                console.error('❌ Failed to set orientation:', orientationError);
+              }
+            }
+
+            // Handle paper size with fallback
+            if (size) {
+              console.log(`🔄 Setting paper size to: ${size}`);
+              try {
+                if (paperMap[size]) {
+                  // Use Word.PaperType if available
+                  setup.paperSize = paperMap[size];
+                  console.log('✅ Paper size set using Word.PaperType');
+                } else if (paperDimensions[size]) {
+                  // Fallback: set dimensions directly
+                  console.log(`🔄 Using fallback dimensions for ${size}`);
+                  const dims = paperDimensions[size];
+                  
+                  // Adjust dimensions based on orientation
+                  if (orientation === "landscape") {
+                    setup.pageWidth = dims.height;
+                    setup.pageHeight = dims.width;
+                    console.log(`✅ Paper size set to ${size} landscape: ${dims.height}x${dims.width} pts`);
+                  } else {
+                    setup.pageWidth = dims.width;
+                    setup.pageHeight = dims.height;
+                    console.log(`✅ Paper size set to ${size} portrait: ${dims.width}x${dims.height} pts`);
+                  }
+                } else {
+                  console.warn(`⚠️ Paper size ${size} not supported`);
+                }
+              } catch (sizeError) {
+                console.error('❌ Failed to set paper size:', sizeError);
+              }
+            }
+
+            // Set margins
+            console.log('🔄 Setting margins:', margins);
+            try {
+              if (margins.top) {
+                setup.topMargin = cmToPt(margins.top);
+                console.log(`✅ Top margin set: ${margins.top}cm`);
+              }
+              if (margins.bottom) {
+                setup.bottomMargin = cmToPt(margins.bottom);
+                console.log(`✅ Bottom margin set: ${margins.bottom}cm`);
+              }
+              if (margins.left) {
+                setup.leftMargin = cmToPt(margins.left);
+                console.log(`✅ Left margin set: ${margins.left}cm`);
+              }
+              if (margins.right) {
+                setup.rightMargin = cmToPt(margins.right);
+                console.log(`✅ Right margin set: ${margins.right}cm`);
+              }
+            } catch (marginError) {
+              console.error('❌ Failed to set margins:', marginError);
+            }
+          }
+
+          console.log('🔄 Syncing changes...');
           await ctx.sync();
+          console.log('✅ PageSetup changes synced successfully');
 
           let msg = `Đã thiết lập toàn bộ trang: ${size || "mặc định"}, hướng ${orientation || "portrait"}`;
           if (Object.keys(margins).length) {
@@ -1189,7 +1356,24 @@ async function executeWordAction(actionObj: any) {
         });
       } catch (err) {
         console.error("Page setup failed:", err);
-        addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage("Không thể thay đổi Page Setup. Có thể do tài liệu bị khóa hoặc Add-in không có quyền."))
+        console.error("Error details:", {
+          name: (err as Error).name,
+          message: (err as Error).message,
+          stack: (err as Error).stack
+        });
+        
+        let errorMsg = "Không thể thay đổi Page Setup. ";
+        if ((err as Error).message.includes('pageSetup')) {
+          errorMsg += "Tính năng PageSetup không khả dụng trong phiên bản Word này.";
+        } else if ((err as Error).message.includes('PaperType')) {
+          errorMsg += "Không hỗ trợ thay đổi khổ giấy trong phiên bản này.";
+        } else if ((err as Error).message.includes('Orientation')) {
+          errorMsg += "Không hỗ trợ thay đổi hướng trang trong phiên bản này.";
+        } else {
+          errorMsg += "Có thể do tài liệu bị khóa hoặc Add-in không có quyền.";
+        }
+        
+        addChatMessage(historyDialog.value, currentDocumentId.value, createAssistantMessage(errorMsg))
       }
       return;
     }
